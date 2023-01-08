@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-#rawloader = "0.37.1"
-#libheif-rs = "0.15.1"
+regex = "1.7.0"
+lazy-regex = "2.4.1"
 kamadak-exif = "0.5.5"
-#opencv = "0.74.2"
+
