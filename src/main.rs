@@ -1,5 +1,6 @@
 use std::error::Error;
 
+mod error;
 mod img;
 
 fn main() -> Result<(), Box<dyn Error>> {
