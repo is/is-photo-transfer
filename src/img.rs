@@ -1,7 +1,7 @@
 use std::ffi::OsStr;
 use std::path::Path;
 use std::string::String;
-use lazy_regex::{Lazy, regex};
+use lazy_static::lazy_static;
 use regex::Regex;
 
 fn split_path(path: &str) -> Option<(&OsStr, &OsStr, &OsStr)> {
@@ -26,36 +26,25 @@ pub struct ImageMeta {
 }
 
 
-impl Default for ImageMeta {
-    fn default() -> Self {
-        ImageMeta {
-            model: "".to_string(),
-            datetime: String::from(""),
-            number: String::from(""),
-            ext: String::from(""),
-            version: PatternVersion::UNKNOWN,
-        }
-    }
+lazy_static! {
+    static ref FILE_NAME_PATTERN_V1: Regex = Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").unwrap();
+    static ref FILE_NAME_PATTERN_V2: Regex = Regex::new(r"(\d{8}_\d{6})__(\d{2,5})_(.{1,})").unwrap();
 }
 
-
-static FILENAME_PATTERN_V1: &Lazy<Regex> = regex!(r"(\D)_(\d{5})__(\d{8}_\d{6})");
-static FILENAME_PATTERN_V2: &Lazy<Regex> = regex!(r"(\d{8}_\d{6})__(\d{2,5})_(\D{1,2})");
-
-fn get_image_meta_from_filename(file_stem: &str, file_ext: &str) -> Option<ImageMeta>{
-    if let Some(captures) =  FILENAME_PATTERN_V1.captures(file_stem) {
+fn get_image_meta_from_file_name(file_stem: &str, file_ext: &str) -> Option<ImageMeta>{
+    if let Some(captures) =  FILE_NAME_PATTERN_V1.captures(file_stem) {
         Some(ImageMeta {
-            model: captures.get(3)?.as_str().to_string(),
-            datetime: captures.get(1)?.as_str().to_string(),
+            model: captures.get(1)?.as_str().to_string(),
+            datetime: captures.get(3)?.as_str().to_string(),
             number: captures.get(2)?.as_str().to_string(),
             ext: file_ext.to_uppercase(),
             version: PatternVersion::V1,
         })
-    } else if let Some(captures) = FILENAME_PATTERN_V2.captures(file_stem) {
+    } else if let Some(captures) = FILE_NAME_PATTERN_V2.captures(file_stem) {
         Some(ImageMeta {
-            model: captures.get(2)?.as_str().to_string(),
+            model: captures.get(3)?.as_str().to_string(),
             datetime: captures.get(1)?.as_str().to_string(),
-            number: captures.get(3)?.as_str().to_string(),
+            number: captures.get(2)?.as_str().to_string(),
             ext: file_ext.to_uppercase(),
             version: PatternVersion::V2,
         })
@@ -78,7 +67,7 @@ impl ImageMeta {
         let file_stem = file_stem.to_str()?;
         let file_ext= file_ext.to_str()?;
 
-        get_image_meta_from_filename(file_stem, file_ext)
+        get_image_meta_from_file_name(file_stem, file_ext)
             .or(get_image_meta_from_exif(full_path, file_stem, file_ext))
     }
 }
@@ -88,9 +77,40 @@ impl ImageMeta {
 mod tests {
     use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
-    use lazy_regex::regex;
     use regex::Regex;
-    use crate::img::ImageMeta;
+    use crate::img::{ImageMeta, PatternVersion};
+
+
+    #[test]
+    fn test_image_meta_from_file() {
+        let path = "A_02104__20230105_150108.arw";
+        let meta = ImageMeta::from_file(path);
+        assert!(!meta.is_none());
+        assert_eq!(meta.as_ref().unwrap().version, PatternVersion::V1);
+
+        match &meta {
+            Some(m) => {
+                assert_eq!(m.ext, "ARW");
+                assert_eq!(m.version, PatternVersion::V1);
+                assert_eq!(m.datetime, "20230105_150108");
+                assert_eq!(m.model, "A");
+            }
+            None => assert!(false)
+        };
+
+        let path = "20230105_150108__03212_A7R4.arw";
+        let meta = ImageMeta::from_file(path).unwrap();
+
+        match meta.version {
+            PatternVersion::V2  => {
+                assert_eq!(meta.datetime, "20230105_150108");
+                assert_eq!(meta.ext, "ARW");
+                assert_eq!(meta.model, "A7R4");
+            }
+            _ => assert!(false)
+        }
+    }
+
 
     #[test]
     fn test_path_buf() {
@@ -131,25 +151,5 @@ mod tests {
         assert_eq!("A", captures.get(1).unwrap().as_str());
         assert_eq!("02104", captures.get(2).unwrap().as_str());
         assert_eq!("20230105_150108", captures.get(3).unwrap().as_str());
-    }
-
-
-    #[test]
-    fn test_lazy_regex_0() {
-        let name = "A_02104__20230105_150108";
-        let r0 = regex!(r"(\D)_(\d{5})__(\d{8}_\d{6})");
-        let captures = r0.captures(name).unwrap();
-        assert_eq!("A_02104__20230105_150108", captures.get(0).unwrap().as_str());
-        assert_eq!("A", captures.get(1).unwrap().as_str());
-        assert_eq!("02104", captures.get(2).unwrap().as_str());
-        assert_eq!("20230105_150108", captures.get(3).unwrap().as_str());
-    }
-
-    #[test]
-    fn test_image_meta_from_file() {
-        let path = "A_02104__20230105_150108.arw";
-        let meta = ImageMeta::from_file(path);
-        assert!(!meta.is_none());
-        assert_eq!(meta.unwrap().version, crate::img::PatternVersion::V1)
     }
 }
