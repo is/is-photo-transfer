@@ -1,12 +1,9 @@
+#![allow(dead_code)]
+
 use std::path::Path;
 use std::string::String;
 use lazy_static::lazy_static;
 use regex::Regex;
-
-// fn split_path(path: &str) -> Option<(&OsStr, &OsStr, &OsStr)> {
-//     let path = Path::new(path);
-//     Some((path.parent()?.as_os_str(), path.file_stem()?, path.extension()?))
-// }
 
 fn split_path_2(path: &str) -> Option<(&str, &str, &str)> {
     let path = Path::new(path);
@@ -32,11 +29,14 @@ pub enum FileMeta {
 lazy_static! {
     static ref FILE_NAME_PATTERN_V1: Regex = Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").unwrap();
     static ref FILE_NAME_PATTERN_V2: Regex = Regex::new(r"(\d{8}_\d{6})__(\d{2,5})_(.{1,})").unwrap();
+
+    static ref NUMBER_IN_FILE_NAME: Regex = Regex::new(r".+?(\d+)").unwrap();
 }
 
 impl FileMeta {
     pub fn from_path(path:&str) -> Option<FileMeta> {
-        let (_dir, file_stem, file_ext) = split_path_2(path)?;
+        let (_dir, file_stem, file_ext)
+            = split_path_2(path)?;
 
         if let Some(captures) = FILE_NAME_PATTERN_V1.captures(file_stem) {
             return Some(FileMeta::V1(MetaCore{
@@ -58,7 +58,10 @@ impl FileMeta {
         None
     }
 
+    #[allow(unused)]
     pub fn from_exif(path:&str) -> Option<FileMeta> {
+        let (dir, file_stem, file_ext) 
+            = split_path_2(path)?;
         None
     }
 }
@@ -68,20 +71,37 @@ impl FileMeta {
 mod tests {
     use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
-    use hex_literal::hex;
     use regex::Regex;
-    use sha2::{Sha256, Sha512, Digest};
+    use sha2::Digest;
 
     static FILE_NAME_1:&str = "A_02104__20230105_150108.arw";
     static FILE_NAME_2:&str = "20230105_150108__03212_A7R4.arw";
 
+    #[test]
+    fn test_number_in_name() {
+        let p = &super::NUMBER_IN_FILE_NAME;
+
+        if let Some(captures) = p.captures("DSC03212") {
+            assert_eq!(
+                captures.get(1).unwrap().as_str(),
+                "03212");
+        } else {
+            assert!(false);
+        }
+    }
 
     #[test]
     fn test_hash_sha2() {
         let mut hasher = sha2::Sha256::new();
         hasher.update(b"hello world");
         let digest = hasher.finalize();
+        let tail = &digest[(digest.len() - 4)..];
+        let sign = u32::from_be_bytes(TryInto::<[u8;4]>::try_into(tail).unwrap());
+        assert_eq!(sign, 3807366633);
+        assert_eq!(format!("{:05}", sign % 10000), "06633");
+        /*
         assert_eq!(digest[..], hex!("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9")[..]);
+        */
     }
 
     #[test]
