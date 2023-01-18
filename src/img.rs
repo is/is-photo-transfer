@@ -1,4 +1,5 @@
 use std::ffi::OsStr;
+use std::fmt::format;
 use std::path::Path;
 use std::string::String;
 use lazy_static::lazy_static;
@@ -60,6 +61,7 @@ fn get_image_meta_from_exif(
 }
 
 
+#[allow(unused)]
 impl ImageMeta {
     fn from_file(full_path:&str) -> Option<Self> {
         let (_dir, file_stem, file_ext) = split_path(full_path)?;
@@ -70,6 +72,26 @@ impl ImageMeta {
         get_image_meta_from_file_name(file_stem, file_ext)
             .or(get_image_meta_from_exif(full_path, file_stem, file_ext))
     }
+
+
+    fn to_name(self: &Self) -> Option<String> {
+        match self {
+            ImageMeta {version: PatternVersion::V1, ..} =>
+                Some(format!("{}_{}__{}", self.model, self.number, self.datetime)),
+            ImageMeta {version: PatternVersion::V2, ..} =>
+                Some(format!("{}__{}_{}", self.datetime, self.number, self.model)),
+            _ => None
+        }
+    }
+
+    fn to_v1(self: Self) -> Option<Self>{
+        match &self {
+            ImageMeta {version:PatternVersion::V1, ..} => Some(self),
+            ImageMeta {version:PatternVersion::V2, ..} =>
+                Some(ImageMeta{version: PatternVersion::V1, ..self}),
+            _ => None
+        }
+    }
 }
 
 
@@ -79,6 +101,9 @@ mod tests {
     use std::path::{Path, PathBuf};
     use regex::Regex;
     use crate::img::{ImageMeta, PatternVersion};
+
+    static FILE_NAME_1:&str = "A_02104__20230105_150108.arw";
+    static FILE_NAME_2:&str = "20230105_150108__03212_A7R4.arw";
 
 
     #[test]
@@ -111,6 +136,12 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_image_meta_to_str() {
+        let meta = ImageMeta::from_file(FILE_NAME_1).unwrap();
+        let file_name = meta.to_name();
+        assert_eq!(file_name, Some("Hello".to_string()));
+    }
 
     #[test]
     fn test_path_buf() {
