@@ -1,96 +1,65 @@
-use std::ffi::OsStr;
-use std::fmt::format;
 use std::path::Path;
 use std::string::String;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-fn split_path(path: &str) -> Option<(&OsStr, &OsStr, &OsStr)> {
+// fn split_path(path: &str) -> Option<(&OsStr, &OsStr, &OsStr)> {
+//     let path = Path::new(path);
+//     Some((path.parent()?.as_os_str(), path.file_stem()?, path.extension()?))
+// }
+
+fn split_path_2(path: &str) -> Option<(&str, &str, &str)> {
     let path = Path::new(path);
-    Some((path.parent()?.as_os_str(), path.file_stem()?, path.extension()?))
-}
-
-#[derive(Debug, PartialEq)]
-pub enum PatternVersion {
-    UNKNOWN,
-    V1,
-    V2,
+    Some((path.parent()?.as_os_str().to_str()?,
+          path.file_stem()?.to_str()?,
+          path.extension()?.to_str()?))
 }
 
 
-pub struct ImageMeta {
+pub struct MetaCore {
     pub model: String,
     pub datetime: String,
     pub number: String,
     pub ext: String,
-    pub version: PatternVersion,
 }
 
+
+pub enum FileMeta {
+    V1(MetaCore),
+    V2(MetaCore),
+}
 
 lazy_static! {
     static ref FILE_NAME_PATTERN_V1: Regex = Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").unwrap();
     static ref FILE_NAME_PATTERN_V2: Regex = Regex::new(r"(\d{8}_\d{6})__(\d{2,5})_(.{1,})").unwrap();
 }
 
-fn get_image_meta_from_file_name(file_stem: &str, file_ext: &str) -> Option<ImageMeta>{
-    if let Some(captures) =  FILE_NAME_PATTERN_V1.captures(file_stem) {
-        Some(ImageMeta {
-            model: captures.get(1)?.as_str().to_string(),
-            datetime: captures.get(3)?.as_str().to_string(),
-            number: captures.get(2)?.as_str().to_string(),
-            ext: file_ext.to_uppercase(),
-            version: PatternVersion::V1,
-        })
-    } else if let Some(captures) = FILE_NAME_PATTERN_V2.captures(file_stem) {
-        Some(ImageMeta {
-            model: captures.get(3)?.as_str().to_string(),
-            datetime: captures.get(1)?.as_str().to_string(),
-            number: captures.get(2)?.as_str().to_string(),
-            ext: file_ext.to_uppercase(),
-            version: PatternVersion::V2,
-        })
-    } else {
+impl FileMeta {
+    pub fn from_path(path:&str) -> Option<FileMeta> {
+        let (_dir, file_stem, file_ext) = split_path_2(path)?;
+
+        if let Some(captures) = FILE_NAME_PATTERN_V1.captures(file_stem) {
+            return Some(FileMeta::V1(MetaCore{
+                model: captures.get(1)?.as_str().to_string(),
+                datetime: captures.get(3)?.as_str().to_string(),
+                number: captures.get(2)?.as_str().to_string(),
+                ext: file_ext.to_uppercase(),
+            }));
+        }
+
+        if let Some(captures) = FILE_NAME_PATTERN_V2.captures(file_stem) {
+            return Some(FileMeta::V2(MetaCore {
+                model: captures.get(3)?.as_str().to_string(),
+                datetime: captures.get(1)?.as_str().to_string(),
+                number: captures.get(2)?.as_str().to_string(),
+                ext: file_ext.to_uppercase(),
+            }));
+        }
         None
     }
-}
 
-
-fn get_image_meta_from_exif(
-    full_path: &str, file_stem: &str, file_ext: &str) -> Option<ImageMeta>{
-    None
-}
-
-
-#[allow(unused)]
-impl ImageMeta {
-    fn from_file(full_path:&str) -> Option<Self> {
-        let (_dir, file_stem, file_ext) = split_path(full_path)?;
-
-        let file_stem = file_stem.to_str()?;
-        let file_ext= file_ext.to_str()?;
-
-        get_image_meta_from_file_name(file_stem, file_ext)
-            .or(get_image_meta_from_exif(full_path, file_stem, file_ext))
-    }
-
-
-    fn to_name(self: &Self) -> Option<String> {
-        match self {
-            ImageMeta {version: PatternVersion::V1, ..} =>
-                Some(format!("{}_{}__{}", self.model, self.number, self.datetime)),
-            ImageMeta {version: PatternVersion::V2, ..} =>
-                Some(format!("{}__{}_{}", self.datetime, self.number, self.model)),
-            _ => None
-        }
-    }
-
-    fn to_v1(self: Self) -> Option<Self>{
-        match &self {
-            ImageMeta {version:PatternVersion::V1, ..} => Some(self),
-            ImageMeta {version:PatternVersion::V2, ..} =>
-                Some(ImageMeta{version: PatternVersion::V1, ..self}),
-            _ => None
-        }
+    pub fn from_exif(path:&str) -> Option<FileMeta> {
+        None
     }
 }
 
@@ -99,48 +68,20 @@ impl ImageMeta {
 mod tests {
     use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
+    use hex_literal::hex;
     use regex::Regex;
-    use crate::img::{ImageMeta, PatternVersion};
+    use sha2::{Sha256, Sha512, Digest};
 
     static FILE_NAME_1:&str = "A_02104__20230105_150108.arw";
     static FILE_NAME_2:&str = "20230105_150108__03212_A7R4.arw";
 
 
     #[test]
-    fn test_image_meta_from_file() {
-        let path = "A_02104__20230105_150108.arw";
-        let meta = ImageMeta::from_file(path);
-        assert!(!meta.is_none());
-        assert_eq!(meta.as_ref().unwrap().version, PatternVersion::V1);
-
-        match &meta {
-            Some(m) => {
-                assert_eq!(m.ext, "ARW");
-                assert_eq!(m.version, PatternVersion::V1);
-                assert_eq!(m.datetime, "20230105_150108");
-                assert_eq!(m.model, "A");
-            }
-            None => assert!(false)
-        };
-
-        let path = "20230105_150108__03212_A7R4.arw";
-        let meta = ImageMeta::from_file(path).unwrap();
-
-        match meta.version {
-            PatternVersion::V2  => {
-                assert_eq!(meta.datetime, "20230105_150108");
-                assert_eq!(meta.ext, "ARW");
-                assert_eq!(meta.model, "A7R4");
-            }
-            _ => assert!(false)
-        }
-    }
-
-    #[test]
-    fn test_image_meta_to_str() {
-        let meta = ImageMeta::from_file(FILE_NAME_1).unwrap();
-        let file_name = meta.to_name();
-        assert_eq!(file_name, Some("Hello".to_string()));
+    fn test_hash_sha2() {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(b"hello world");
+        let digest = hasher.finalize();
+        assert_eq!(digest[..], hex!("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9")[..]);
     }
 
     #[test]
@@ -159,14 +100,14 @@ mod tests {
     #[test]
     fn test_split_path() {
         let (p0, p1, p2) =
-            super::split_path("A_02104__20230105_150108.ARW").unwrap();
+            super::split_path_2("A_02104__20230105_150108.ARW").unwrap();
         assert_eq!("", p0);
         assert_eq!("A_02104__20230105_150108", p1);
         assert_eq!("ARW", p2);
 
 
         let (p0, p1, p2) =
-            super::split_path("ABC/A_02104__20230105_150108.ARW").unwrap();
+            super::split_path_2("ABC/A_02104__20230105_150108.ARW").unwrap();
         assert_eq!("ABC", p0);
         assert_eq!("A_02104__20230105_150108", p1);
         assert_eq!("ARW", p2);
