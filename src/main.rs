@@ -4,6 +4,7 @@ mod error;
 mod img;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    /*
     for path in &["tests/IMG_0256.HEIC", "tests/IMG_0257.DNG"] {
         println!("-- {}", path);
 
@@ -15,5 +16,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("{} {} {}", f.tag, f.ifd_num, f.display_value().with_unit(&exif));
         }
     }
+     */
+
+    img::FileMeta::from_exif("tests/BCDF1203-FD49-4805-B2AE-8E93B67D9076.JPG");
     Ok(())
 }
