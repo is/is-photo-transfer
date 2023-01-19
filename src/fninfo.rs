@@ -1,23 +1,30 @@
 #![allow(dead_code)]
 
-use std::any::Any;
+use exif::{In, Tag};
 use lazy_static::lazy_static;
 use regex::Regex;
 use sha2::Digest;
 use std::path::Path;
+use std::result::Result;
 use std::string::String;
-use exif::{In, Tag, Value};
+use thiserror::Error;
 
-pub struct MetaCore {
-    pub model: String,
-    pub datetime: String,
-    pub number: String,
-    pub ext: String,
-}
+const MAX_NUMBER: u32 = 100000;
 
-pub enum FileMeta {
-    V1(MetaCore),
-    V2(MetaCore),
+static MODEL_MAP: phf::Map<&'static str, &'static str> = phf::phf_map! {
+    "iPhone 6s" => "IP6S",
+    "iPhone 7" => "IP7",
+    "iPhone 12 Pro Max" => "IP12PM",
+    "ILCE-6400" => "A6400",
+    "ILCE-7RM4A" => "A7R4A",
+    "ILCE-1" => "A1",
+};
+
+lazy_static! {
+    static ref FILE_NAME_PATTERN_V1: Regex = Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").unwrap();
+    static ref FILE_NAME_PATTERN_V2: Regex =
+        Regex::new(r"(\d{8}_\d{6})__(\d{2,5})_(.{1,})").unwrap();
+    static ref NUMBER_IN_FILE_NAME: Regex = Regex::new(r".+?(\d+)").unwrap();
 }
 
 fn split_path_2(path: &str) -> Option<(&str, &str, &str)> {
@@ -52,62 +59,135 @@ fn number_from_file_name(file_name: &str) -> String {
     number_from_file_name_hash(file_name)
 }
 
-const MAX_NUMBER: u32 = 100000;
-
-lazy_static! {
-    static ref FILE_NAME_PATTERN_V1: Regex = Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").unwrap();
-    static ref FILE_NAME_PATTERN_V2: Regex =
-        Regex::new(r"(\d{8}_\d{6})__(\d{2,5})_(.{1,})").unwrap();
-    static ref NUMBER_IN_FILE_NAME: Regex = Regex::new(r".+?(\d+)").unwrap();
+fn file_ext_normal(ext:&str) -> String {
+    if ext == "jpeg" || ext == "JPEG" {
+        "JPG".into()
+    } else {
+        ext.to_uppercase()
+    }
 }
 
-impl FileMeta {
-    pub fn from_path(path: &str) -> Option<FileMeta> {
+
+pub struct Info {
+    pub model: String,
+    pub datetime: String,
+    pub number: String,
+    pub ext: String,
+    pub ver: InfoVer,
+}
+
+pub enum InfoVer {
+    V1,
+    V2,
+}
+
+#[derive(Error, Debug)]
+pub enum InfoErr {
+    #[error("io error:{0}, path: {1}")]
+    Io(&'static str, String),
+    #[error("exif error:{0}, path: {1}")]
+    Exif(&'static str, String),
+    #[error("unknown:{0}, path: {1}")]
+    Unknown(&'static str, String),
+}
+
+pub fn from(path:&str) -> Result<Info, InfoErr> {
+    Info::from(path)
+}
+
+impl Info {
+    pub fn from(path: &str) -> Result<Self, InfoErr> {
+        if let Some(m) = Self::from_path(path) {
+            Ok(m)
+        } else {
+            Self::from_exif(path)
+        }
+    }
+
+    pub fn from_path(path: &str) -> Option<Self> {
         let (_dir, file_stem, file_ext) = split_path_2(path)?;
 
         if let Some(captures) = FILE_NAME_PATTERN_V1.captures(file_stem) {
-            return Some(FileMeta::V1(MetaCore {
+            return Some(Self {
                 model: captures.get(1)?.as_str().to_string(),
                 datetime: captures.get(3)?.as_str().to_string(),
                 number: captures.get(2)?.as_str().to_string(),
-                ext: file_ext.to_uppercase(),
-            }));
+                ext: file_ext_normal(file_ext),
+                ver: InfoVer::V1,
+            });
         }
 
         if let Some(captures) = FILE_NAME_PATTERN_V2.captures(file_stem) {
-            return Some(FileMeta::V2(MetaCore {
+            return Some(Self {
                 model: captures.get(3)?.as_str().to_string(),
                 datetime: captures.get(1)?.as_str().to_string(),
                 number: captures.get(2)?.as_str().to_string(),
-                ext: file_ext.to_uppercase(),
-            }));
+                ext: file_ext_normal(file_ext),
+                ver: InfoVer::V2,
+            });
         }
         None
     }
 
     #[allow(unused)]
-    pub fn from_exif(path: &str) -> Option<FileMeta> {
-        let (dir, file_stem, file_ext) = split_path_2(path)?;
+    pub fn from_exif(path: &str) -> Result<Self, InfoErr> {
+        type E = InfoErr;
+        let (dir, file_stem, file_ext) =
+            split_path_2(path).ok_or_else(|| E::Io("split", path.into()))?;
+
         let number = number_from_file_name(file_stem);
 
-        let file = std::fs::File::open(path).ok()?;
+        let file = std::fs::File::open(path).map_err(|e| E::Io("open", path.into()))?;
+
         let mut buf_reader = std::io::BufReader::new(&file);
         let exif_reader = exif::Reader::new();
-        let exif = exif_reader.read_from_container(&mut buf_reader).ok()?;
+        let exif = exif_reader
+            .read_from_container(&mut buf_reader)
+            .map_err(|e| E::Exif("parse", path.into()))?;
 
-        let model_field = exif.get_field(Tag::Model, In::PRIMARY);
-        let create_date_field = exif.get_field(Tag::DateTimeOriginal, In::PRIMARY);
+        let model_field = exif
+            .get_field(Tag::Model, In::PRIMARY)
+            .ok_or_else(|| E::Exif("model", path.into()))?;
+        let datetime_field = exif
+            .get_field(Tag::DateTimeOriginal, In::PRIMARY)
+            .ok_or_else(|| E::Exif("datetime", path.into()))?;
 
-        if model_field.is_none() || create_date_field.is_none() {
-            return None;
-        };
-        None
+        let model_value = model_field
+            .display_value()
+            .to_string()
+            .clone()
+            .replace("\"", "");
+        let datetime_value = datetime_field
+            .display_value()
+            .to_string()
+            .clone()
+            .replace(" ", "_")
+            .replace(":", "")
+            .replace("-", "");
+
+        let model_value = MODEL_MAP.get(&model_value).unwrap_or(&"UNSET").to_string();
+        // println!("model:{}, datetime:{}", model_value, datetime_value);
+        Ok(Self {
+            model: model_value,
+            datetime: datetime_value,
+            number: number,
+            ext: file_ext_normal(file_ext),
+            ver: InfoVer::V2,
+        })
+    }
+
+    pub fn to_name(self: &Self) -> String {
+        format!("{}__{}__{}", self.datetime, self.number, self.model)
+    }
+
+    pub fn to_file_name(self: &Self) -> String {
+        format!("{}.{}", self.to_name(), self.ext)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::img::{number_from_file_name, FileMeta};
+    use crate::fninfo::number_from_file_name;
     use regex::Regex;
     use sha2::Digest;
     use std::ffi::OsStr;
