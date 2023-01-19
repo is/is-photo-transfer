@@ -4,13 +4,7 @@ use std::path::Path;
 use std::string::String;
 use lazy_static::lazy_static;
 use regex::Regex;
-
-fn split_path_2(path: &str) -> Option<(&str, &str, &str)> {
-    let path = Path::new(path);
-    Some((path.parent()?.as_os_str().to_str()?,
-          path.file_stem()?.to_str()?,
-          path.extension()?.to_str()?))
-}
+use sha2::Digest;
 
 
 pub struct MetaCore {
@@ -25,6 +19,38 @@ pub enum FileMeta {
     V1(MetaCore),
     V2(MetaCore),
 }
+
+
+fn split_path_2(path: &str) -> Option<(&str, &str, &str)> {
+    let path = Path::new(path);
+    Some((path.parent()?.as_os_str().to_str()?,
+        path.file_stem()?.to_str()?,
+        path.extension()?.to_str()?))
+}
+
+fn number_from_file_name_hash(file_name:&str) -> String {
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(file_name);
+
+    let digest = hasher.finalize();
+    let tail = &digest[digest.len() - 4..];
+    format!("{:05}",
+        u32::from_be_bytes(TryInto::<[u8;4]>::try_into(tail).unwrap()) % MAX_NUMBER)
+}
+
+fn number_from_file_name(file_name:&str) -> String {
+    if file_name.len() <= 9 {
+        if let Some(captures) = NUMBER_IN_FILE_NAME.captures(file_name) {
+            let number = captures.get(1).unwrap().as_str();
+            let number = format!("{:05}",
+                number.parse::<u32>().unwrap() % MAX_NUMBER);
+            return number;
+        }
+    }
+    number_from_file_name_hash(file_name)
+}
+
+const MAX_NUMBER:u32 = 100000;
 
 lazy_static! {
     static ref FILE_NAME_PATTERN_V1: Regex = Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").unwrap();
@@ -64,6 +90,9 @@ impl FileMeta {
             = split_path_2(path)?;
         None
     }
+
+
+
 }
 
 
@@ -73,21 +102,24 @@ mod tests {
     use std::path::{Path, PathBuf};
     use regex::Regex;
     use sha2::Digest;
+    use crate::img::{FileMeta, number_from_file_name};
 
     static FILE_NAME_1:&str = "A_02104__20230105_150108.arw";
     static FILE_NAME_2:&str = "20230105_150108__03212_A7R4.arw";
 
     #[test]
     fn test_number_in_name() {
-        let p = &super::NUMBER_IN_FILE_NAME;
-
-        if let Some(captures) = p.captures("DSC03212") {
-            assert_eq!(
-                captures.get(1).unwrap().as_str(),
-                "03212");
-        } else {
-            assert!(false);
-        }
+        // let p = &super::NUMBER_IN_FILE_NAME;
+        //
+        // if let Some(captures) = p.captures("DSC03212") {
+        //     assert_eq!(
+        //         captures.get(1).unwrap().as_str(),
+        //         "03212");
+        // } else {
+        //     assert!(false);
+        // }
+        assert_eq!(number_from_file_name("DSC03212"), "03212");
+        assert_eq!(number_from_file_name("BB40B3F3-2D88-4023-82BA-90CAE2C4DB45"), "36957");
     }
 
     #[test]
