@@ -1,5 +1,6 @@
 use std::error::Error;
 
+mod cmd;
 mod fninfo;
 
 fn p(p:& str) -> Result<(), Box<dyn Error>> {
@@ -15,5 +16,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     // println!("{}, {}", m.to_file_name());
     p("tests/IMG_0256.HEIC")?;
     p("tests/IMG_0257.DNG")?;
+    println!("import:{}", cmd::import::import());
     Ok(())
 }
