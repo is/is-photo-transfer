@@ -59,14 +59,13 @@ fn number_from_file_name(file_name: &str) -> String {
     number_from_file_name_hash(file_name)
 }
 
-fn file_ext_normal(ext:&str) -> String {
+fn file_ext_normal(ext: &str) -> String {
     if ext == "jpeg" || ext == "JPEG" {
         "JPG".into()
     } else {
         ext.to_uppercase()
     }
 }
-
 
 pub struct Info {
     pub model: String,
@@ -79,6 +78,7 @@ pub struct Info {
 pub enum InfoVer {
     V1,
     V2,
+    EXIF,
 }
 
 #[derive(Error, Debug)]
@@ -91,7 +91,7 @@ pub enum InfoErr {
     Unknown(&'static str, String),
 }
 
-pub fn from(path:&str) -> Result<Info, InfoErr> {
+pub fn from(path: &str) -> Result<Info, InfoErr> {
     Info::from(path)
 }
 
@@ -157,7 +157,7 @@ impl Info {
             .to_string()
             .clone()
             .replace("\"", "");
-        let datetime_value = datetime_field
+        let datetime = datetime_field
             .display_value()
             .to_string()
             .clone()
@@ -165,14 +165,14 @@ impl Info {
             .replace(":", "")
             .replace("-", "");
 
-        let model_value = MODEL_MAP.get(&model_value).unwrap_or(&"UNSET").to_string();
+        let model = MODEL_MAP.get(&model_value).unwrap_or(&"UNSET").to_string();
         // println!("model:{}, datetime:{}", model_value, datetime_value);
         Ok(Self {
-            model: model_value,
-            datetime: datetime_value,
-            number: number,
+            model,
+            datetime,
+            number,
             ext: file_ext_normal(file_ext),
-            ver: InfoVer::V2,
+            ver: InfoVer::EXIF,
         })
     }
 
