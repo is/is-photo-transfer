@@ -1,5 +1,6 @@
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::{Instant, SystemTime};
 
 pub struct Request {
     pub source: PathBuf,
@@ -27,7 +28,49 @@ pub struct Task<'a> {
     request: &'a mut Request,
 }
 
+fn set_file_times_form0(path: &str, date_str: &str) -> Result<(), std::io::Error> {
+    let date = chrono::NaiveDate::parse_from_str(date_str, "%Y%m%d").unwrap();
+    let seconds = date
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_local_timezone(chrono::offset::Local)
+        .unwrap()
+        .timestamp();
+    let ftime = filetime::FileTime::from_unix_time(seconds, 0);
+    filetime::set_file_times(path, ftime, ftime)
+}
+
+fn set_file_times_form1(path: &str, ftime: SystemTime) -> Result<(), std::io::Error> {
+    let ftime = filetime::FileTime::from_system_time(ftime);
+    filetime::set_file_times(path, ftime, ftime)
+}
+
 impl<'a> Task<'a> {
+    pub fn copy(&mut self, src: &PathBuf) -> R<u64> {
+        let start = Instant::now();
+        let src_str = src.to_str().unwrap();
+        let dest_root_str = self.request.dest.to_str().unwrap().to_string();
+
+        let info = crate::fninfo::from(src_str).unwrap();
+        let date_str = info.datetime[0..8].to_string();
+        let dest_str = format!("{}/{}/{}", dest_root_str, date_str, info.to_file_name());
+        let dest_dir_str = format!("{}/{}", dest_root_str, date_str);
+        let dest_dir = Path::new(&dest_dir_str);
+        if !dest_dir.is_dir() {
+            fs::create_dir_all(dest_dir)
+                .map_err(|_| io_error("create-dir".to_string(), dest_dir_str.clone()))?;
+            set_file_times_form0(&dest_dir_str, &date_str).unwrap();
+        }
+        let dest = Path::new(&dest_str);
+        let r = fs::copy(src.as_path(), &dest);
+        
+        // Ok(())
+        let metadata = fs::metadata(&src_str).unwrap();
+        set_file_times_form1(&dest_str, metadata.created().unwrap()).unwrap();
+        println!("{src_str} -> {dest_str}  _  {:.2}s", start.elapsed().as_secs_f32());
+        r.map_err(|_| io_error("copy".to_string(), src_str.to_string()))
+    }
+
     pub fn run(&mut self) -> Result<Response, ImportError> {
         let src = &self.request.source;
         let src_dir = src.to_str().unwrap();
@@ -44,33 +87,18 @@ impl<'a> Task<'a> {
 
         for entry in glob::glob(&src_pattern).expect("Failed to read glob pattern") {
             match entry {
-                Ok(path) => {self.copy(&path)?;},
-                Err(e) => {println!("{:?}", e);},
+                Ok(path) => {
+                    self.copy(&path)?;
+                }
+                Err(e) => {
+                    println!("{:?}", e);
+                }
             }
         }
 
         println!("{}: {}", src_dir, src_pattern);
 
         Err(ImportError::Ok)
-    }
-
-    pub fn copy(&mut self, src: &PathBuf) -> R<u64> {
-        let src_str = src.to_str().unwrap();
-        let dest_root_str = self.request.dest.to_str().unwrap().to_string();
-
-        let info = crate::fninfo::from(src_str).unwrap();
-        let date_str = info.datetime[0..8].to_string();
-        let dest_str = format!("{}/{}/{}", dest_root_str, date_str, info.to_file_name());
-        let dest_dir_str = format!("{}/{}", dest_root_str, date_str);
-        let dest_dir = Path::new(&dest_dir_str);
-        if !dest_dir.is_dir() {
-            fs::create_dir_all(dest_dir)
-                .map_err(|_| io_error("create-dir".to_string(), dest_dir_str.clone()))?
-        }
-        let dest = Path::new(&dest_str);
-        let r = fs::copy(src.as_path(), &dest);
-        println!("{} -> {}", src_str, dest_str);
-        r.map_err(|_| io_error("copy".to_string(), src_str.to_string()))
     }
 }
 
