@@ -46,7 +46,8 @@ fn set_file_times_form1(path: &str, ftime: SystemTime) -> Result<(), std::io::Er
 }
 
 impl<'a> Task<'a> {
-    pub fn copy(&mut self, src: &PathBuf) -> R<u64> {
+    pub fn copy<S:AsRef<Path>>(&mut self, src:S) -> R<u64> {
+        let src = src.as_ref();
         let start = Instant::now();
         let src_str = src.to_str().unwrap();
         let dest_root_str = self.request.dest.to_str().unwrap().to_string();
@@ -63,7 +64,7 @@ impl<'a> Task<'a> {
         }
         let dest = Path::new(&dest_str);
         if !dest.is_file() {
-            let r = fs::copy(src.as_path(), &dest);
+            let r = fs::copy(src, &dest);
             let metadata = fs::metadata(&src_str).unwrap();
             set_file_times_form1(&dest_str, metadata.created().unwrap()).unwrap();
             println!("{src_str} -> {dest_str}  _  {:.2}s", start.elapsed().as_secs_f32());
