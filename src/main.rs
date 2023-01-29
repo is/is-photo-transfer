@@ -20,7 +20,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let home_value = std::env::var_os("HOME").unwrap();
     let home = home_value.to_str().unwrap();
-    let source = Path::new(&home).join("P0/DCIM");
+    // let source = Path::new(&home).join("P0/DCIM");
+    let source = Path::new("/Volumes/Untitled").to_path_buf();
     let dest = Path::new(&home).join("M0/P8");
 
     let mut req = cmd::import::Request { source, dest };

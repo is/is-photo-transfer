@@ -62,13 +62,16 @@ impl<'a> Task<'a> {
             set_file_times_form0(&dest_dir_str, &date_str).unwrap();
         }
         let dest = Path::new(&dest_str);
-        let r = fs::copy(src.as_path(), &dest);
-        
-        // Ok(())
-        let metadata = fs::metadata(&src_str).unwrap();
-        set_file_times_form1(&dest_str, metadata.created().unwrap()).unwrap();
-        println!("{src_str} -> {dest_str}  _  {:.2}s", start.elapsed().as_secs_f32());
-        r.map_err(|_| io_error("copy".to_string(), src_str.to_string()))
+        if !dest.is_file() {
+            let r = fs::copy(src.as_path(), &dest);
+            let metadata = fs::metadata(&src_str).unwrap();
+            set_file_times_form1(&dest_str, metadata.created().unwrap()).unwrap();
+            println!("{src_str} -> {dest_str}  _  {:.2}s", start.elapsed().as_secs_f32());
+            r.map_err(|_| io_error("copy".to_string(), src_str.to_string()))
+        } else {
+            println!("{src_str} -> {dest_str}  _  skip");
+            Ok(999999999)
+        }
     }
 
     pub fn run(&mut self) -> Result<Response, ImportError> {
