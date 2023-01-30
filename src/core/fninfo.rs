@@ -187,7 +187,7 @@ impl Info {
 
 #[cfg(test)]
 mod tests {
-    use crate::fninfo::number_from_file_name;
+    use super::number_from_file_name;
     use regex::Regex;
     use sha2::Digest;
     use std::ffi::OsStr;
