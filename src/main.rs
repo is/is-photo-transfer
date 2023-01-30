@@ -1,4 +1,4 @@
-mod cmd;
+mod task;
 mod core;
 
 use std::error::Error;
@@ -22,6 +22,8 @@ struct Cli {
 enum Commands {
     #[command(about = "Import photographs from Camera")]
     Import(ImportCommand),
+    #[command(about = "Rename photo in directory")]
+    Rename(RenameCommand),
 }
 
 #[derive(Parser)]
@@ -64,9 +66,17 @@ fn cmd_import(cmd: &ImportCommand) -> R0 {
     let dest = PathBuf::from(cmd_import_dest_dir(cmd));
 
     println!("name:{:?}, source:{:?}, dest:{:?}", cmd.host, source, dest);
-    let mut req = cmd::import::Request { source, dest };
-    cmd::import::import(&mut req)?;
+    let mut req = task::import::Request { source, dest };
+    task::import::import(&mut req)?;
     Ok(())
+}
+
+
+#[derive(Parser)]
+struct RenameCommand {
+    dir: String,
+    #[arg(short, long, default_value_t=false)]
+    dry: bool,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
