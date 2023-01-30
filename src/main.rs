@@ -1,5 +1,5 @@
-mod task;
 mod core;
+mod task;
 
 use std::error::Error;
 use std::path::PathBuf;
@@ -39,11 +39,11 @@ type R0 = Result<(), Box<dyn Error>>;
 fn cmd_import_source_dir(cmd: &ImportCommand) -> String {
     match cmd.source.as_ref() {
         Some(s) => s.clone(),
+        #[rustfmt::skip]
         _ => match cmd.host.as_str() {
             "mac" => "/Volumns/Untitled",
             _ => "/Volumns/Untitled",
-        }
-        .to_string(),
+        }.to_string(),
     }
 }
 
@@ -71,11 +71,10 @@ fn cmd_import(cmd: &ImportCommand) -> R0 {
     Ok(())
 }
 
-
 #[derive(Parser)]
 struct RenameCommand {
     dir: String,
-    #[arg(short, long, default_value_t=false)]
+    #[arg(short, long, default_value_t = false)]
     dry: bool,
 }
 
