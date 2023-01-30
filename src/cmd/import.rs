@@ -2,6 +2,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Instant, SystemTime};
 
+use crate::core::fninfo;
+
 pub struct Request {
     pub source: PathBuf,
     pub dest: PathBuf,
@@ -52,7 +54,7 @@ impl<'a> Task<'a> {
         let src_str = src.to_str().unwrap();
         let dest_root_str = self.request.dest.to_str().unwrap().to_string();
 
-        let info = crate::fninfo::from(src_str).unwrap();
+        let info = fninfo::from(src_str).unwrap();
         let date_str = info.datetime[0..8].to_string();
         let dest_str = format!("{}/{}/{}", dest_root_str, date_str, info.to_file_name());
         let dest_dir_str = format!("{}/{}", dest_root_str, date_str);
