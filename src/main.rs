@@ -4,6 +4,7 @@ use std::path::Path;
 mod cmd;
 mod fninfo;
 
+#[allow(dead_code)]
 fn p(p: &str) -> Result<(), Box<dyn Error>> {
     let m = fninfo::from(p)?;
     println!("{} -> {}", p, m.to_file_name());
@@ -15,8 +16,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // println!("{}", m.to_name());
     // let m = meta::Meta::from("tests/IMG_0256.HEIC")?;
     // println!("{}, {}", m.to_file_name());
-    p("tests/IMG_0256.HEIC")?;
-    p("tests/IMG_0257.DNG")?;
+    // p("tests/IMG_0256.HEIC")?;
+    // p("tests/IMG_0257.DNG")?;
 
     let home_value = std::env::var_os("HOME").unwrap();
     let home = home_value.to_str().unwrap();
