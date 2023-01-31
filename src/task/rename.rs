@@ -41,6 +41,29 @@ type _Error = RenameError;
 
 fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), RenameError> {
     let dir = dir.as_ref();
+    let (files, dirs) = scan_dir(dir);
+
+    // scan subdirectory
+    for entry in dirs {
+        println!("{} dirs - {}", level, entry.path().to_str().unwrap());
+        do_walk(req, level + 1, entry.path())?;
+    }
+
+    let name_map : HashMap<String, String> = build_rename_map(
+        req, level, dir, &files);
+    do_rename_files(req, level, dir, &files, &name_map);
+
+    let preview = dir.join("preview");
+    if preview.is_dir() {
+        let preview_dir = preview.as_path();
+        let pfiles = scan_dir_only_files(preview_dir);
+        do_rename_files(req, level, preview_dir, &pfiles, &name_map);
+    }
+    Ok(())
+}
+
+
+fn scan_dir(dir: &Path) -> (Vec<DirEntry>, Vec<DirEntry>) {
     let mut files:Vec<DirEntry> = Vec::new();
     let mut dirs:Vec<DirEntry> = Vec::new();
     let walker = WalkDir::new(dir).max_depth(1).min_depth(1).sort_by_file_name();
@@ -57,16 +80,23 @@ fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), Rena
                 files.push(e)
             }
         }
-    }
+    };
+    (files, dirs)
+}
 
-    // scan subdirectory
-    for entry in dirs {
-        println!("{} dirs - {}", level, entry.path().to_str().unwrap());
-        do_walk(req, level + 1, entry.path())?;
-    }
+fn scan_dir_only_files(dir: &Path) -> Vec<DirEntry> {
+    let walker = WalkDir::new(dir).max_depth(1).min_depth(1);
+    let walker = walker.sort_by_file_name();
+    walker.into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .collect()
+}
 
+fn build_rename_map(_req: &Request, level: i32, _dir: &Path, files: &Vec<DirEntry>) ->
+    HashMap<String, String> {
     let mut name_map : HashMap<String, String> = HashMap::new();
-    for entry in &files {
+    for entry in files {
         let path = entry.path();
         let full_path = path.to_str().unwrap().to_string();
         let _file_name = path.file_name().unwrap().to_str().unwrap().to_string();
@@ -99,24 +129,9 @@ fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), Rena
 
         name_map.insert(file_stem, meta_name);
     }
-    do_rename_files(req, level, dir, &files, &name_map);
-
-    let preview = dir.join("preview");
-    if preview.is_dir() {
-        let preview_dir = preview.as_path();
-    
-        let walker = WalkDir::new(preview_dir).max_depth(1).min_depth(1);
-        let walker = walker.sort_by_file_name();
-    
-        let pfiles: Vec<DirEntry> = walker.into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.file_type().is_file())
-            .collect();
-        
-        do_rename_files(req, level, preview_dir, &pfiles, &name_map);
-    }
-    Ok(())
+    name_map
 }
+
 
 fn do_rename_files(_req: &Request, _level: i32, dir: &Path, 
     files:& Vec<DirEntry>,
