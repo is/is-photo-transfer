@@ -1,6 +1,6 @@
-use std::{path::Path, collections::HashMap};
+use std::{collections::HashMap, path::Path};
 
-use walkdir::{WalkDir, DirEntry};
+use walkdir::{DirEntry, WalkDir};
 
 #[derive(thiserror::Error, Debug)]
 pub enum RenameError {
@@ -16,8 +16,7 @@ impl From<walkdir::Error> for RenameError {
 
 impl From<crate::core::fninfo::InfoErr> for RenameError {
     fn from(e: crate::core::fninfo::InfoErr) -> Self {
-        Self::Io(String::from("metainfo"),
-            e.to_string())
+        Self::Io(String::from("metainfo"), e.to_string())
     }
 }
 
@@ -49,8 +48,7 @@ fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), Rena
         do_walk(req, level + 1, entry.path())?;
     }
 
-    let name_map : HashMap<String, String> = build_rename_map(
-        req, level, dir, &files);
+    let name_map: HashMap<String, String> = build_rename_map(req, level, dir, &files);
     do_rename_files(req, level, dir, &files, &name_map);
 
     let preview = dir.join("preview");
@@ -62,11 +60,13 @@ fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), Rena
     Ok(())
 }
 
-
 fn scan_dir(dir: &Path) -> (Vec<DirEntry>, Vec<DirEntry>) {
-    let mut files:Vec<DirEntry> = Vec::new();
-    let mut dirs:Vec<DirEntry> = Vec::new();
-    let walker = WalkDir::new(dir).max_depth(1).min_depth(1).sort_by_file_name();
+    let mut files: Vec<DirEntry> = Vec::new();
+    let mut dirs: Vec<DirEntry> = Vec::new();
+    let walker = WalkDir::new(dir)
+        .max_depth(1)
+        .min_depth(1)
+        .sort_by_file_name();
 
     for entry in walker {
         if let Ok(e) = entry {
@@ -80,22 +80,27 @@ fn scan_dir(dir: &Path) -> (Vec<DirEntry>, Vec<DirEntry>) {
                 files.push(e)
             }
         }
-    };
+    }
     (files, dirs)
 }
 
 fn scan_dir_only_files(dir: &Path) -> Vec<DirEntry> {
     let walker = WalkDir::new(dir).max_depth(1).min_depth(1);
     let walker = walker.sort_by_file_name();
-    walker.into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.file_type().is_file())
-            .collect()
+    walker
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .collect()
 }
 
-fn build_rename_map(_req: &Request, level: i32, _dir: &Path, files: &Vec<DirEntry>) ->
-    HashMap<String, String> {
-    let mut name_map : HashMap<String, String> = HashMap::new();
+fn build_rename_map(
+    _req: &Request,
+    level: i32,
+    _dir: &Path,
+    files: &Vec<DirEntry>,
+) -> HashMap<String, String> {
+    let mut name_map: HashMap<String, String> = HashMap::new();
     for entry in files {
         let path = entry.path();
         let full_path = path.to_str().unwrap().to_string();
@@ -113,9 +118,9 @@ fn build_rename_map(_req: &Request, level: i32, _dir: &Path, files: &Vec<DirEntr
 
         if !is_img {
             println!("{level} - {full_path:?} - NO.IMG");
-            continue
+            continue;
         }
-        
+
         let meta = crate::core::fninfo::from(&full_path);
         if meta.is_err() {
             println!("{level} - {full_path:?} - MISS.META");
@@ -124,18 +129,20 @@ fn build_rename_map(_req: &Request, level: i32, _dir: &Path, files: &Vec<DirEntr
 
         let meta = meta.unwrap();
         let meta_name = meta.to_name();
-        println!("{level} - {full_path:?} -> {}.{}",
-            meta_name, file_ext);
+        println!("{level} - {full_path:?} -> {}.{}", meta_name, file_ext);
 
         name_map.insert(file_stem, meta_name);
     }
     name_map
 }
 
-
-fn do_rename_files(_req: &Request, _level: i32, dir: &Path, 
-    files:& Vec<DirEntry>,
-    map: &HashMap<String, String>) {
+fn do_rename_files(
+    _req: &Request,
+    _level: i32,
+    dir: &Path,
+    files: &Vec<DirEntry>,
+    map: &HashMap<String, String>,
+) {
     let base_dir = dir.to_str().unwrap();
 
     for entry in files {
@@ -144,7 +151,7 @@ fn do_rename_files(_req: &Request, _level: i32, dir: &Path,
         let file_stem = path.file_stem().unwrap().to_str().unwrap().to_string();
         let file_ext = path.extension();
         if file_ext.is_none() {
-            break
+            break;
         }
         let file_ext = file_ext.unwrap().to_str().unwrap();
 
@@ -152,7 +159,7 @@ fn do_rename_files(_req: &Request, _level: i32, dir: &Path,
             Some(r) => {
                 let new_fn = format!("{base_dir}/{r}.{file_ext}");
                 println!("RENAME {file_path} -> {new_fn}")
-            },
+            }
             None => (),
         }
     }
