@@ -5,7 +5,6 @@ use std::error::Error;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use lazy_static::__Deref;
 
 use crate::core::utils;
 
@@ -74,16 +73,21 @@ fn cmd_import(cmd: &ImportCommand) -> CmdResult {
 }
 
 // ---- RENAME ----
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 pub struct RenameCommand {
-    #[arg(default_value_t = String::from("."))]
+    #[arg(default_value = ".")]
     dir: String,
     #[arg(short, long, default_value_t = false)]
+    #[arg(help = "update information from exif")]
+    exif: bool,
+    #[arg(short, long, default_value_t = false)]
+    #[arg(help = "show what would have been renamed")]
     dry: bool,
 }
 
 fn cmd_rename(cmd: &RenameCommand) -> CmdResult {
     task::rename::rename(&task::rename::Request::from(cmd))?;
+    // println!("{:?}", cmd);
     Ok(())
 }
 
