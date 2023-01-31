@@ -91,9 +91,10 @@ fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), Rena
         }
 
         let meta = meta.unwrap();
+        let meta_name = meta.to_name();
         println!("{level} - {full_path:?} -> {}.{}",
-            meta.to_name(), file_ext)
-        
+            meta_name, file_ext);
+        name_map.insert(file_stem, meta_name);
     }
     Ok(())
 }
