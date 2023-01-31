@@ -5,13 +5,14 @@ use std::error::Error;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use lazy_static::__Deref;
 
 use crate::core::utils;
 
 #[derive(Parser)]
 #[command(name = "is-armory-photo")]
 #[command(author = "Yu Xin <scaner@gmail.com>")]
-#[command(version = "0.1.0", about = "I.S. Photo Armory")]
+#[command(version = "0.1.1", about = "I.S. Photo Armory")]
 #[command(about="Photograph toolbox", long_about=None)]
 struct Cli {
     #[command(subcommand)]
@@ -74,7 +75,7 @@ fn cmd_import(cmd: &ImportCommand) -> CmdResult {
 
 // ---- RENAME ----
 #[derive(Parser)]
-struct RenameCommand {
+pub struct RenameCommand {
     #[arg(default_value_t = String::from("."))]
     dir: String,
     #[arg(short, long, default_value_t = false)]
@@ -82,10 +83,9 @@ struct RenameCommand {
 }
 
 fn cmd_rename(cmd: &RenameCommand) -> CmdResult {
-    println!("rename cmd {}", cmd.dir);
+    task::rename::rename(&task::rename::Request::from(cmd))?;
     Ok(())
 }
-
 
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
