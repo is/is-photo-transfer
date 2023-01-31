@@ -26,6 +26,7 @@ enum Commands {
     Rename(RenameCommand),
 }
 
+// ---- IMPORT ----
 #[derive(Parser)]
 struct ImportCommand {
     source: Option<String>,
@@ -34,7 +35,7 @@ struct ImportCommand {
     host: String,
 }
 
-type R0 = Result<(), Box<dyn Error>>;
+type CmdResult = Result<(), Box<dyn Error>>;
 
 fn cmd_import_source_dir(cmd: &ImportCommand) -> String {
     match cmd.source.as_ref() {
@@ -61,7 +62,7 @@ fn cmd_import_dest_dir(cmd: &ImportCommand) -> String {
     }
 }
 
-fn cmd_import(cmd: &ImportCommand) -> R0 {
+fn cmd_import(cmd: &ImportCommand) -> CmdResult {
     let source = PathBuf::from(cmd_import_source_dir(cmd));
     let dest = PathBuf::from(cmd_import_dest_dir(cmd));
 
@@ -71,18 +72,27 @@ fn cmd_import(cmd: &ImportCommand) -> R0 {
     Ok(())
 }
 
+// ---- RENAME ----
 #[derive(Parser)]
 struct RenameCommand {
+    #[arg(default_value_t = String::from("."))]
     dir: String,
     #[arg(short, long, default_value_t = false)]
     dry: bool,
 }
+
+fn cmd_rename(cmd: &RenameCommand) -> CmdResult {
+    println!("rename cmd {}", cmd.dir);
+    Ok(())
+}
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
     match cli.command {
         Some(Commands::Import(cmd)) => cmd_import(&cmd),
+        Some(Commands::Rename(cmd)) => cmd_rename(&cmd),
         _ => Ok(()),
     }
 }
