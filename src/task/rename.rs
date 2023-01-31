@@ -1,6 +1,6 @@
 use std::{path::Path, collections::HashMap};
 
-use walkdir::WalkDir;
+use walkdir::{WalkDir, DirEntry};
 
 #[derive(thiserror::Error, Debug)]
 pub enum RenameError {
@@ -40,10 +40,12 @@ impl Request {
 type _Error = RenameError;
 
 fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), RenameError> {
-    let mut files:Vec<walkdir::DirEntry> = Vec::new();
-    let mut dirs:Vec<walkdir::DirEntry> = Vec::new();
+    let dir = dir.as_ref();
+    let mut files:Vec<DirEntry> = Vec::new();
+    let mut dirs:Vec<DirEntry> = Vec::new();
+    let walker = WalkDir::new(dir).max_depth(1).min_depth(1).sort_by_file_name();
 
-    for entry in WalkDir::new(dir.as_ref()).max_depth(1).min_depth(1) {
+    for entry in walker {
         if let Ok(e) = entry {
             // println!("{level} - {}", e.path().to_str().unwrap());
             if e.file_type().is_dir() {
@@ -57,17 +59,17 @@ fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), Rena
         }
     }
 
+    // scan subdirectory
     for entry in dirs {
         println!("{} dirs - {}", level, entry.path().to_str().unwrap());
         do_walk(req, level + 1, entry.path())?;
     }
 
     let mut name_map : HashMap<String, String> = HashMap::new();
-    
-    for entry in files {
+    for entry in &files {
         let path = entry.path();
         let full_path = path.to_str().unwrap().to_string();
-        let file_name = path.file_name().unwrap().to_str().unwrap().to_string();
+        let _file_name = path.file_name().unwrap().to_str().unwrap().to_string();
         let file_stem = path.file_stem().unwrap().to_str().unwrap().to_string();
         let file_ext = path.extension();
 
@@ -94,9 +96,51 @@ fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), Rena
         let meta_name = meta.to_name();
         println!("{level} - {full_path:?} -> {}.{}",
             meta_name, file_ext);
+
         name_map.insert(file_stem, meta_name);
     }
+    do_rename_files(req, level, dir, &files, &name_map);
+
+    let preview = dir.join("preview");
+    if preview.is_dir() {
+        let preview_dir = preview.as_path();
+    
+        let walker = WalkDir::new(preview_dir).max_depth(1).min_depth(1);
+        let walker = walker.sort_by_file_name();
+    
+        let pfiles: Vec<DirEntry> = walker.into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .collect();
+        
+        do_rename_files(req, level, preview_dir, &pfiles, &name_map);
+    }
     Ok(())
+}
+
+fn do_rename_files(_req: &Request, _level: i32, dir: &Path, 
+    files:& Vec<DirEntry>,
+    map: &HashMap<String, String>) {
+    let base_dir = dir.to_str().unwrap();
+
+    for entry in files {
+        let path = entry.path();
+        let file_path = path.to_str().unwrap();
+        let file_stem = path.file_stem().unwrap().to_str().unwrap().to_string();
+        let file_ext = path.extension();
+        if file_ext.is_none() {
+            break
+        }
+        let file_ext = file_ext.unwrap().to_str().unwrap();
+
+        match map.get(&file_stem) {
+            Some(r) => {
+                let new_fn = format!("{base_dir}/{r}.{file_ext}");
+                println!("RENAME {file_path} -> {new_fn}")
+            },
+            None => (),
+        }
+    }
 }
 
 pub fn rename(req: &Request) -> Result<(), RenameError> {
