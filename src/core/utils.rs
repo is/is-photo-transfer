@@ -6,7 +6,7 @@ pub fn env_var(key: &str) -> Option<String> {
 }
 
 lazy_static! {
-    static ref IMG_PEXT: Regex = Regex::new(r"jpeg|jpg|heif|heic|arw").unwrap();
+    static ref IMG_PEXT: Regex = Regex::new(r"jpeg|jpg|heif|heic|arw|dng").unwrap();
 }
 
 pub fn is_img_ext<T: AsRef<str>>(ext: T) -> bool {
