@@ -127,9 +127,13 @@ fn build_rename_map(
 
         let meta = meta.unwrap();
         let meta_name = meta.to_name();
-        println!("{level} - {full_path:?} -> {}.{}", meta_name, file_ext);
-
-        name_map.insert(file_stem, meta_name);
+        
+        if !file_stem.eq(&meta_name) {
+            println!("{level} - {full_path:?} -> {}.{}", meta_name, file_ext);
+            name_map.insert(file_stem, meta_name);
+        } else {
+            println!("{level} - {full_path:?} -> HOLD")
+        }
     }
     name_map
 }
@@ -139,8 +143,12 @@ fn do_rename_files(
     _level: i32,
     dir: &Path,
     files: &Vec<DirEntry>,
-    map: &HashMap<String, String>,
-) {
+    map: &HashMap<String, String>)
+{
+    if map.len() == 0 || files.len() == 0 {
+        return
+    }
+
     let base_dir = dir.to_str().unwrap();
 
     for entry in files {
