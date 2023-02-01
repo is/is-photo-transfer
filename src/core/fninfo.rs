@@ -75,6 +75,7 @@ pub struct Info {
     pub ver: InfoVer,
 }
 
+#[derive(PartialEq)]
 pub enum InfoVer {
     V1,
     V2,
@@ -176,12 +177,25 @@ impl Info {
         })
     }
 
-    pub fn to_name(self: &Self) -> String {
+    pub fn to_name(&self) -> String {
         format!("{}__{}__{}", self.datetime, self.number, self.model)
     }
 
-    pub fn to_file_name(self: &Self) -> String {
+    pub fn to_file_name(&self) -> String {
         format!("{}.{}", self.to_name(), self.ext)
+    }
+
+    pub fn update_from_exif(self, path: &str) -> Self {
+        if self.ver == InfoVer::V2 {
+            self
+        } else {
+            Self::from_exif(path)
+                .map(|m| Self {
+                    number: self.number.clone(),
+                    ..m
+                })
+                .unwrap_or(self)
+        }
     }
 }
 
