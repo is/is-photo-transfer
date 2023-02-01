@@ -24,7 +24,7 @@ lazy_static! {
     static ref FILE_NAME_PATTERN_V1: Regex = 
         Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").expect("FILE_NAME_PATTERN_V1");
     static ref FILE_NAME_PATTERN_V2: Regex =
-        Regex::new(r"(\d{8}_\d{6})__(\d{2,5})_(.{1,})").unwrap();
+        Regex::new(r"(\d{8}_\d{6})__(\d{2,5})__(.{1,})").unwrap();
     static ref NUMBER_IN_FILE_NAME: Regex = Regex::new(r".+?(\d{2,})").unwrap();
     static ref FILE_WITHOUT_DATE: Regex =
         Regex::new(r"(\d{6})__(\d{2,5})__(.{1,})").expect("SHORT_FILE_NAME");
