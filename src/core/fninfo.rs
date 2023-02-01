@@ -130,7 +130,6 @@ impl Info {
         None
     }
 
-    #[allow(unused)]
     pub fn from_exif(path: &str) -> Result<Self, InfoErr> {
         type E = InfoErr;
         let (dir, file_stem, file_ext) =
@@ -175,6 +174,10 @@ impl Info {
             ext: file_ext_normal(file_ext),
             ver: InfoVer::EXIF,
         })
+    }
+
+    pub fn from_exif_2(path: &str, number:&str) -> Result<Self, InfoErr> {
+        Self::from_exif(path).map(|e| Self{number: number.to_string(), ..e})
     }
 
     pub fn to_name(&self) -> String {
