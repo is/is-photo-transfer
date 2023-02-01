@@ -54,7 +54,7 @@ fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), Rena
     let preview = dir.join("preview");
     if preview.is_dir() {
         let preview_dir = preview.as_path();
-        let pfiles = scan_dir_only_files(preview_dir);
+        let (pfiles, _) = scan_dir(preview_dir);
         do_rename_files(req, level, preview_dir, &pfiles, &name_map);
     }
     Ok(())
@@ -70,9 +70,7 @@ fn scan_dir(dir: &Path) -> (Vec<DirEntry>, Vec<DirEntry>) {
 
     for entry in walker {
         if let Ok(e) = entry {
-            // println!("{level} - {}", e.path().to_str().unwrap());
             if e.file_type().is_dir() {
-                // do_walk(req, level + 1, e.path())?
                 if e.path().file_name().unwrap() != "preview" {
                     dirs.push(e)
                 }
@@ -84,15 +82,15 @@ fn scan_dir(dir: &Path) -> (Vec<DirEntry>, Vec<DirEntry>) {
     (files, dirs)
 }
 
-fn scan_dir_only_files(dir: &Path) -> Vec<DirEntry> {
-    let walker = WalkDir::new(dir).max_depth(1).min_depth(1);
-    let walker = walker.sort_by_file_name();
-    walker
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-        .collect()
-}
+// fn scan_dir_only_files(dir: &Path) -> Vec<DirEntry> {
+//     let walker = WalkDir::new(dir).max_depth(1).min_depth(1);
+//     let walker = walker.sort_by_file_name();
+//     walker
+//         .into_iter()
+//         .filter_map(|e| e.ok())
+//         .filter(|e| e.file_type().is_file())
+//         .collect()
+// }
 
 fn build_rename_map(
     _req: &Request,
