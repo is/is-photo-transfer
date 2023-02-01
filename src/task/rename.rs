@@ -144,7 +144,7 @@ fn build_rename_map(
 }
 
 fn do_rename_files(
-    _req: &Request,
+    req: &Request,
     _level: i32,
     dir: &Path,
     files: &Vec<DirEntry>,
@@ -169,11 +169,19 @@ fn do_rename_files(
         match map.get(&file_stem) {
             Some(r) => {
                 let new_fn = format!("{base_dir}/{r}.{file_ext}");
-                println!("RENAME {file_path} -> {new_fn}")
+                println!("RENAME {file_path} -> {new_fn}");
+                if !req.dry {
+                    do_rename(file_path, &new_fn).expect("do_rename_faile");
+                }
             }
             None => (),
         }
     }
+}
+
+fn do_rename(src: &str, dest: &str) -> Result<(), std::io::Error> {
+    std::fs::rename(src, dest)?;
+    crate::core::touch::touch_with_filename(dest)
 }
 
 pub fn rename(req: &Request) -> Result<(), RenameError> {

@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::{Instant, SystemTime};
+use std::time::Instant;
 
 use crate::core::fninfo;
 
@@ -30,23 +30,6 @@ pub struct Task<'a> {
     request: &'a mut Request,
 }
 
-fn set_file_times_form0(path: &str, date_str: &str) -> Result<(), std::io::Error> {
-    let date = chrono::NaiveDate::parse_from_str(date_str, "%Y%m%d").unwrap();
-    let seconds = date
-        .and_hms_opt(0, 0, 0)
-        .unwrap()
-        .and_local_timezone(chrono::offset::Local)
-        .unwrap()
-        .timestamp();
-    let ftime = filetime::FileTime::from_unix_time(seconds, 0);
-    filetime::set_file_times(path, ftime, ftime)
-}
-
-fn set_file_times_form1(path: &str, ftime: SystemTime) -> Result<(), std::io::Error> {
-    let ftime = filetime::FileTime::from_system_time(ftime);
-    filetime::set_file_times(path, ftime, ftime)
-}
-
 impl<'a> Task<'a> {
     pub fn copy<S: AsRef<Path>>(&mut self, src: S) -> R<u64> {
         let src = src.as_ref();
@@ -62,13 +45,13 @@ impl<'a> Task<'a> {
         if !dest_dir.is_dir() {
             fs::create_dir_all(dest_dir)
                 .map_err(|_| io_error("create-dir".to_string(), dest_dir_str.clone()))?;
-            set_file_times_form0(&dest_dir_str, &date_str).unwrap();
+            crate::core::touch::touch_form_0(&dest_dir_str, &date_str).unwrap();
         }
         let dest = Path::new(&dest_str);
         if !dest.is_file() {
             let r = fs::copy(src, &dest);
             let metadata = fs::metadata(&src_str).unwrap();
-            set_file_times_form1(&dest_str, metadata.created().unwrap()).unwrap();
+            crate::core::touch::touch_form_1(&dest_str, metadata.created().unwrap()).unwrap();
             println!(
                 "{src_str} -> {dest_str}  _  {:.2}s",
                 start.elapsed().as_secs_f32()
