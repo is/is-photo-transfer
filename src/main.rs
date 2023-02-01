@@ -86,6 +86,9 @@ pub struct RenameCommand {
     #[arg(short, long, default_value_t = false)]
     #[arg(help = "show what would have been renamed")]
     dry: bool,
+    #[arg(short, long, default_value_t = false)]
+    #[arg(help = "rename in compact one mode")]
+    compact: bool,
 }
 
 fn cmd_rename(cmd: &RenameCommand) -> CmdResult {

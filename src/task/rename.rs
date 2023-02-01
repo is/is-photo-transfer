@@ -24,6 +24,7 @@ pub struct Request {
     pub dir: String,
     pub exif: bool,
     pub dry: bool,
+    pub compact: bool,
 }
 
 impl Request {
@@ -32,6 +33,7 @@ impl Request {
             dir: item.dir.clone(),
             exif: item.exif,
             dry: item.dry,
+            compact: item.compact,
         }
     }
 }
@@ -131,7 +133,14 @@ fn build_rename_map(
         } else {
             meta
         };
+
         let meta_name = meta.to_name();
+
+        let meta_name = if req.compact {
+            meta_name[9..].to_string()
+        } else {
+            meta_name
+        };
 
         if !file_stem.eq(&meta_name) {
             println!("{level} - {full_path:?} -> {}.{}", meta_name, file_ext);
@@ -171,7 +180,7 @@ fn do_rename_files(
                 let new_fn = format!("{base_dir}/{r}.{file_ext}");
                 println!("RENAME {file_path} -> {new_fn}");
                 if !req.dry {
-                    do_rename(file_path, &new_fn).expect("do_rename_faile");
+                    do_rename(req, file_path, &new_fn).expect("do_rename_faile");
                 }
             }
             None => (),
@@ -179,9 +188,12 @@ fn do_rename_files(
     }
 }
 
-fn do_rename(src: &str, dest: &str) -> Result<(), std::io::Error> {
+fn do_rename(req: &Request, src: &str, dest: &str) -> Result<(), std::io::Error> {
     std::fs::rename(src, dest)?;
-    crate::core::touch::touch_with_filename(dest)
+    if !req.compact {
+        crate::core::touch::touch_with_filename(dest)?
+    };
+    Ok(())
 }
 
 pub fn rename(req: &Request) -> Result<(), RenameError> {
