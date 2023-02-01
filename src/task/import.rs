@@ -7,6 +7,7 @@ use crate::core::fninfo;
 pub struct Request {
     pub source: PathBuf,
     pub dest: PathBuf,
+    pub compact: bool,
 }
 
 pub struct Response {}
@@ -39,8 +40,13 @@ impl<'a> Task<'a> {
 
         let info = fninfo::from(src_str).unwrap();
         let date_str = info.datetime[0..8].to_string();
-        let dest_str = format!("{}/{}/{}", dest_root_str, date_str, info.to_file_name());
-        let dest_dir_str = format!("{}/{}", dest_root_str, date_str);
+        
+        let (dest_dir_str, dest_str) = if self.request.compact {
+            info.to_compact_dir_and_full(&dest_root_str)
+        } else {
+            info.to_dir_and_full(&dest_root_str)
+        };
+
         let dest_dir = Path::new(&dest_dir_str);
         if !dest_dir.is_dir() {
             fs::create_dir_all(dest_dir)

@@ -21,10 +21,15 @@ static MODEL_MAP: phf::Map<&'static str, &'static str> = phf::phf_map! {
 };
 
 lazy_static! {
-    static ref FILE_NAME_PATTERN_V1: Regex = Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").unwrap();
+    static ref FILE_NAME_PATTERN_V1: Regex = 
+        Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").expect("FILE_NAME_PATTERN_V1");
     static ref FILE_NAME_PATTERN_V2: Regex =
         Regex::new(r"(\d{8}_\d{6})__(\d{2,5})_(.{1,})").unwrap();
     static ref NUMBER_IN_FILE_NAME: Regex = Regex::new(r".+?(\d{2,})").unwrap();
+    static ref FILE_WITHOUT_DATE: Regex =
+        Regex::new(r"(\d{6})__(\d{2,5})__(.{1,})").expect("SHORT_FILE_NAME");
+    static ref SHORT_FILE_WITH_DIR: Regex =
+        Regex::new(r"(\d{8})/(\d{6})__(\d{2,5})__(.{1,})").unwrap();
 }
 
 fn split_path_2(path: &str) -> Option<(&str, &str, &str)> {
@@ -55,6 +60,11 @@ fn number_from_file_name(file_name: &str) -> String {
             let number = format!("{:05}", number.parse::<u32>().unwrap() % MAX_NUMBER);
             return number;
         }
+    }
+    if let Some(captures) = FILE_WITHOUT_DATE.captures(file_name) {
+        let number = captures.get(2).unwrap().as_str();
+        let number = number.to_string();
+        return number;
     }
     number_from_file_name_hash(file_name)
 }
@@ -132,18 +142,18 @@ impl Info {
 
     pub fn from_exif(path: &str) -> Result<Self, InfoErr> {
         type E = InfoErr;
-        let (dir, file_stem, file_ext) =
+        let (_dir, file_stem, file_ext) =
             split_path_2(path).ok_or_else(|| E::Io("split", path.into()))?;
 
         let number = number_from_file_name(file_stem);
 
-        let file = std::fs::File::open(path).map_err(|e| E::Io("open", path.into()))?;
+        let file = std::fs::File::open(path).map_err(|_| E::Io("open", path.into()))?;
 
         let mut buf_reader = std::io::BufReader::new(&file);
         let exif_reader = exif::Reader::new();
         let exif = exif_reader
             .read_from_container(&mut buf_reader)
-            .map_err(|e| E::Exif("parse", path.into()))?;
+            .map_err(|_| E::Exif("parse", path.into()))?;
 
         let model_field = exif
             .get_field(Tag::Model, In::PRIMARY)
@@ -176,12 +186,19 @@ impl Info {
         })
     }
 
-    pub fn from_exif_2(path: &str, number:&str) -> Result<Self, InfoErr> {
-        Self::from_exif(path).map(|e| Self{number: number.to_string(), ..e})
+    pub fn from_exif_2(path: &str, number: &str) -> Result<Self, InfoErr> {
+        Self::from_exif(path).map(|e| Self {
+            number: number.to_string(),
+            ..e
+        })
     }
 
     pub fn to_name(&self) -> String {
         format!("{}__{}__{}", self.datetime, self.number, self.model)
+    }
+
+    pub fn to_compact_name(&self) -> String {
+        format!("{}__{}__{}", &self.datetime[9..15], self.number, self.model)
     }
 
     pub fn to_file_name(&self) -> String {
@@ -199,6 +216,20 @@ impl Info {
                 })
                 .unwrap_or(self)
         }
+    }
+
+    pub fn to_dir_and_full(&self, dir:&str) -> (String, String) {
+        let date_str = &self.datetime[0..8];
+        let dest_dir = format!("{dir}/{date_str}");
+        let dest_path = format!("{dest_dir}/{}.{}", self.to_name(), self.ext);
+        (dest_dir, dest_path)
+    }
+
+    pub fn to_compact_dir_and_full(&self, dir:&str) -> (String, String) {
+        let date_str = &self.datetime[0..8];
+        let dest_dir = format!("{dir}/{date_str}");
+        let dest_path = format!("{dest_dir}/{}.{}", self.to_compact_name(), self.ext);
+        (dest_dir, dest_path)
     }
 }
 

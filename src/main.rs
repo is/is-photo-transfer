@@ -33,6 +33,8 @@ struct ImportCommand {
     dest: Option<String>,
     #[arg(long, default_value_t=String::from("mac"))]
     host: String,
+    #[arg(long, short, default_value_t = false)]
+    compact: bool,
 }
 
 type CmdResult = Result<(), Box<dyn Error>>;
@@ -65,9 +67,10 @@ fn cmd_import_dest_dir(cmd: &ImportCommand) -> String {
 fn cmd_import(cmd: &ImportCommand) -> CmdResult {
     let source = PathBuf::from(cmd_import_source_dir(cmd));
     let dest = PathBuf::from(cmd_import_dest_dir(cmd));
+    let compact = cmd.compact;
 
     println!("name:{:?}, source:{:?}, dest:{:?}", cmd.host, source, dest);
-    let mut req = task::import::Request { source, dest };
+    let mut req = task::import::Request { source, dest, compact};
     task::import::import(&mut req)?;
     Ok(())
 }
