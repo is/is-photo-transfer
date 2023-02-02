@@ -30,6 +30,9 @@ lazy_static! {
         Regex::new(r"(\d{6})__(\d{2,5})__(.{1,})").expect("SHORT_FILE_NAME");
     static ref SHORT_FILE_WITH_DIR: Regex =
         Regex::new(r"(\d{8})/(\d{6})__(\d{2,5})__(.{1,})").unwrap();
+    static ref COMPACT_FORM_1: Regex =
+        Regex::new(r"(\d{8})/(\d{6})__(\d{3,5})__(.+)\.([^.]+)").expect("COMPACT_FORM_1");
+
 }
 
 fn split_path_2(path: &str) -> Option<(&str, &str, &str)> {
@@ -135,6 +138,17 @@ impl Info {
                 number: captures.get(2)?.as_str().to_string(),
                 ext: file_ext_normal(file_ext),
                 ver: InfoVer::V2,
+            });
+        }
+
+        if let Some(captures) = COMPACT_FORM_1.captures(path) {
+            return Some(Self {
+                model: captures.get(4)?.as_str().to_string(),
+                datetime: format!("{}_{}",
+                    captures.get(1)?.as_str(), captures.get(2)?.as_str()),
+                number: captures.get(3)?.as_str().to_string(),
+                ext: file_ext_normal(captures.get(5)?.as_str()),
+                ver: InfoVer::V2
             });
         }
         None
