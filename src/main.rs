@@ -35,6 +35,8 @@ struct ImportCommand {
     host: String,
     #[arg(long, short, default_value_t = false)]
     compact: bool,
+    #[arg(long, short, default_value_t = true)]
+    touch: bool,
 }
 
 type CmdResult = Result<(), Box<dyn Error>>;
@@ -68,9 +70,15 @@ fn cmd_import(cmd: &ImportCommand) -> CmdResult {
     let source = PathBuf::from(cmd_import_source_dir(cmd));
     let dest = PathBuf::from(cmd_import_dest_dir(cmd));
     let compact = cmd.compact;
+    let touch = cmd.touch;
 
     println!("name:{:?}, source:{:?}, dest:{:?}", cmd.host, source, dest);
-    let mut req = task::import::Request { source, dest, compact};
+    let mut req = task::import::Request {
+        source,
+        dest,
+        compact,
+        touch,
+    };
     task::import::import(&mut req)?;
     Ok(())
 }
@@ -89,6 +97,10 @@ pub struct RenameCommand {
     #[arg(short, long, default_value_t = false)]
     #[arg(help = "rename in compact one mode")]
     compact: bool,
+    #[arg(short, long, default_value_t = true)]
+    #[arg(help = "touch file and dir timestamp")]
+    touch: bool,
+
 }
 
 fn cmd_rename(cmd: &RenameCommand) -> CmdResult {

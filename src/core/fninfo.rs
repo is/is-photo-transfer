@@ -7,6 +7,7 @@ use sha2::Digest;
 use std::path::Path;
 use std::result::Result;
 use std::string::String;
+use std::time::SystemTime;
 use thiserror::Error;
 
 const MAX_NUMBER: u32 = 100000;
@@ -21,7 +22,7 @@ static MODEL_MAP: phf::Map<&'static str, &'static str> = phf::phf_map! {
 };
 
 lazy_static! {
-    static ref FILE_NAME_PATTERN_V1: Regex = 
+    static ref FILE_NAME_PATTERN_V1: Regex =
         Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").expect("FILE_NAME_PATTERN_V1");
     static ref FILE_NAME_PATTERN_V2: Regex =
         Regex::new(r"(\d{8}_\d{6})__(\d{2,5})__(.{1,})").unwrap();
@@ -32,7 +33,6 @@ lazy_static! {
         Regex::new(r"(\d{8})/(\d{6})__(\d{2,5})__(.{1,})").unwrap();
     static ref COMPACT_FORM_1: Regex =
         Regex::new(r"(\d{8})/(\d{6})__(\d{3,5})__(.+)\.([^.]+)").expect("COMPACT_FORM_1");
-
 }
 
 fn split_path_2(path: &str) -> Option<(&str, &str, &str)> {
@@ -144,11 +144,14 @@ impl Info {
         if let Some(captures) = COMPACT_FORM_1.captures(path) {
             return Some(Self {
                 model: captures.get(4)?.as_str().to_string(),
-                datetime: format!("{}_{}",
-                    captures.get(1)?.as_str(), captures.get(2)?.as_str()),
+                datetime: format!(
+                    "{}_{}",
+                    captures.get(1)?.as_str(),
+                    captures.get(2)?.as_str()
+                ),
                 number: captures.get(3)?.as_str().to_string(),
                 ext: file_ext_normal(captures.get(5)?.as_str()),
-                ver: InfoVer::V2
+                ver: InfoVer::V2,
             });
         }
         None
@@ -232,18 +235,24 @@ impl Info {
         }
     }
 
-    pub fn to_dir_and_full(&self, dir:&str) -> (String, String) {
+    pub fn to_dir_and_full(&self, dir: &str) -> (String, String) {
         let date_str = &self.datetime[0..8];
         let dest_dir = format!("{dir}/{date_str}");
         let dest_path = format!("{dest_dir}/{}.{}", self.to_name(), self.ext);
         (dest_dir, dest_path)
     }
 
-    pub fn to_compact_dir_and_full(&self, dir:&str) -> (String, String) {
+    pub fn to_compact_dir_and_full(&self, dir: &str) -> (String, String) {
         let date_str = &self.datetime[0..8];
         let dest_dir = format!("{dir}/{date_str}");
         let dest_path = format!("{dest_dir}/{}.{}", self.to_compact_name(), self.ext);
         (dest_dir, dest_path)
+    }
+
+    pub fn to_systemtime(&self) -> SystemTime {
+        let date = chrono::NaiveDateTime::parse_from_str(&self.datetime, "%Y%m%d_%H%M%S").unwrap();
+        let date = date.and_local_timezone(chrono::offset::Local).unwrap();
+        SystemTime::from(date)
     }
 }
 

@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, time::SystemTime};
 
 pub fn touch_form_0(path: &str, date_str: &str) -> Result<(), std::io::Error> {
     let date = chrono::NaiveDate::parse_from_str(date_str, "%Y%m%d").unwrap();
@@ -12,12 +12,7 @@ pub fn touch_form_0(path: &str, date_str: &str) -> Result<(), std::io::Error> {
     filetime::set_file_times(path, ftime, ftime)
 }
 
-pub fn touch_form_1(path: &str, ftime: std::time::SystemTime) -> Result<(), std::io::Error> {
-    let ftime = filetime::FileTime::from_system_time(ftime);
-    filetime::set_file_times(path, ftime, ftime)
-}
-
-pub fn touch_with_filename(path: &str) -> Result<(), std::io::Error> {
+pub fn _touch_with_filename(path: &str) -> Result<(), std::io::Error> {
     let p = Path::new(path);
     let file_stem = p.file_stem().unwrap();
 
@@ -37,8 +32,12 @@ pub fn touch_with_filename(path: &str) -> Result<(), std::io::Error> {
     filetime::set_file_times(path, ftime, ftime)
 }
 
+pub fn touch(target:&str, time:SystemTime) -> Result<(), std::io::Error> {
+    let ftime = filetime::FileTime::from(time);
+    filetime::set_file_times(target, ftime, ftime)
+}
 
-pub fn _touch_by_filename(target:&str, path:&str) -> Result<(), std::io::Error> {
+pub fn _touch_by_filename(target: &str, path: &str) -> Result<(), std::io::Error> {
     let p = Path::new(path);
     let file_stem = p.file_stem().unwrap();
 

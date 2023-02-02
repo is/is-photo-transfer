@@ -2,6 +2,8 @@ use std::{collections::HashMap, path::Path};
 
 use walkdir::{DirEntry, WalkDir};
 
+use crate::core::fninfo::Info;
+
 #[derive(thiserror::Error, Debug)]
 pub enum RenameError {
     #[error("io-error {0}: {1}")]
@@ -25,6 +27,7 @@ pub struct Request {
     pub exif: bool,
     pub dry: bool,
     pub compact: bool,
+    pub touch: bool,
 }
 
 impl Request {
@@ -34,8 +37,14 @@ impl Request {
             exif: item.exif,
             dry: item.dry,
             compact: item.compact,
+            touch: item.touch,
         }
     }
+}
+
+struct RenameEntry {
+    name: String,
+    meta: Info,
 }
 
 type _Error = RenameError;
@@ -50,7 +59,7 @@ fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), Rena
         do_walk(req, level + 1, entry.path())?;
     }
 
-    let name_map: HashMap<String, String> = build_rename_map(req, level, dir, &files);
+    let name_map: HashMap<String, RenameEntry> = build_rename_map(req, level, dir, &files);
     do_rename_files(req, level, dir, &files, &name_map);
 
     let preview = dir.join("preview");
@@ -84,23 +93,13 @@ fn scan_dir(dir: &Path) -> (Vec<DirEntry>, Vec<DirEntry>) {
     (files, dirs)
 }
 
-// fn scan_dir_only_files(dir: &Path) -> Vec<DirEntry> {
-//     let walker = WalkDir::new(dir).max_depth(1).min_depth(1);
-//     let walker = walker.sort_by_file_name();
-//     walker
-//         .into_iter()
-//         .filter_map(|e| e.ok())
-//         .filter(|e| e.file_type().is_file())
-//         .collect()
-// }
-
 fn build_rename_map(
     req: &Request,
     level: i32,
     _dir: &Path,
     files: &Vec<DirEntry>,
-) -> HashMap<String, String> {
-    let mut name_map: HashMap<String, String> = HashMap::new();
+) -> HashMap<String, RenameEntry> {
+    let mut name_map: HashMap<String, RenameEntry> = HashMap::new();
     for entry in files {
         let path = entry.path();
         let full_path = path.to_str().unwrap().to_string();
@@ -144,7 +143,7 @@ fn build_rename_map(
 
         if !file_stem.eq(&meta_name) {
             println!("{level} - {full_path:?} -> {}.{}", meta_name, file_ext);
-            name_map.insert(file_stem, meta_name);
+            name_map.insert(file_stem, RenameEntry{name:meta_name, meta});
         } else {
             println!("{level} - {full_path:?} -> HOLD")
         }
@@ -157,7 +156,7 @@ fn do_rename_files(
     _level: i32,
     dir: &Path,
     files: &Vec<DirEntry>,
-    map: &HashMap<String, String>,
+    map: &HashMap<String, RenameEntry>,
 ) {
     if map.len() == 0 || files.len() == 0 {
         return;
@@ -177,10 +176,11 @@ fn do_rename_files(
 
         match map.get(&file_stem) {
             Some(r) => {
-                let new_fn = format!("{base_dir}/{r}.{file_ext}");
+                let name = &r.name;
+                let new_fn = format!("{base_dir}/{name}.{file_ext}");
                 println!("RENAME {file_path} -> {new_fn}");
                 if !req.dry {
-                    do_rename(req, file_path, &new_fn).expect("do_rename_faile");
+                    do_rename(req, file_path, &new_fn, &r.meta).expect("do_rename_faile");
                 }
             }
             None => (),
@@ -188,10 +188,10 @@ fn do_rename_files(
     }
 }
 
-fn do_rename(req: &Request, src: &str, dest: &str) -> Result<(), std::io::Error> {
+fn do_rename(req: &Request, src: &str, dest: &str, meta:&Info) -> Result<(), std::io::Error> {
     std::fs::rename(src, dest)?;
-    if !req.compact {
-        crate::core::touch::touch_with_filename(dest)?
+    if !req.compact && req.touch {
+        crate::core::touch::touch(dest, meta.to_systemtime())?
     };
     Ok(())
 }

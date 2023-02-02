@@ -8,6 +8,7 @@ pub struct Request {
     pub source: PathBuf,
     pub dest: PathBuf,
     pub compact: bool,
+    pub touch: bool,
 }
 
 pub struct Response {}
@@ -40,7 +41,7 @@ impl<'a> Task<'a> {
 
         let info = fninfo::from(src_str).unwrap();
         let date_str = info.datetime[0..8].to_string();
-        
+
         let (dest_dir_str, dest_str) = if self.request.compact {
             info.to_compact_dir_and_full(&dest_root_str)
         } else {
@@ -51,13 +52,17 @@ impl<'a> Task<'a> {
         if !dest_dir.is_dir() {
             fs::create_dir_all(dest_dir)
                 .map_err(|_| io_error("create-dir".to_string(), dest_dir_str.clone()))?;
-            crate::core::touch::touch_form_0(&dest_dir_str, &date_str).unwrap();
+            if self.request.touch {
+                crate::core::touch::touch_form_0(&dest_dir_str, &date_str).unwrap();
+            }
         }
         let dest = Path::new(&dest_str);
         if !dest.is_file() {
             let r = fs::copy(src, &dest);
             let metadata = fs::metadata(&src_str).unwrap();
-            crate::core::touch::touch_form_1(&dest_str, metadata.created().unwrap()).unwrap();
+            if self.request.touch {
+                crate::core::touch::touch(&dest_str, metadata.created().unwrap()).unwrap();
+            }
             println!(
                 "{src_str} -> {dest_str}  _  {:.2}s",
                 start.elapsed().as_secs_f32()
