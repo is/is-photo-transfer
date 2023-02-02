@@ -17,8 +17,6 @@ pub struct Response {}
 pub enum ImportError {
     #[error("io-error {0}: {1}")]
     Io(String, String),
-    #[error("OK")]
-    Ok,
 }
 
 type E = ImportError;
@@ -105,7 +103,7 @@ impl<'a> Task<'a> {
         for file in &files {
             self.copy(file)?;
         }
-        Err(())
+        Ok(Response{})
     }
 }
 
