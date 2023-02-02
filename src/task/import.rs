@@ -1,4 +1,4 @@
-use std::fs;
+use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -91,7 +91,8 @@ impl<'a> Task<'a> {
         for entry in glob::glob(&src_pattern).expect("Failed to read glob pattern") {
             match entry {
                 Ok(path) => {
-                    files.push(path);
+                    files.push(path.clone());
+                    self.copy(path)?;
                 }
                 Err(e) => {
                     println!("{:?}", e);
@@ -100,9 +101,9 @@ impl<'a> Task<'a> {
         }
 
         println!("{src_dir} has {} photos", files.len());
-        for file in &files {
-            self.copy(file)?;
-        }
+        // for file in &files {
+        //     self.copy(file)?;
+        // }
         Ok(Response{})
     }
 }
