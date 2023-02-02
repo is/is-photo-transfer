@@ -32,7 +32,7 @@ pub fn _touch_with_filename(path: &str) -> Result<(), std::io::Error> {
     filetime::set_file_times(path, ftime, ftime)
 }
 
-pub fn touch(target:&str, time:SystemTime) -> Result<(), std::io::Error> {
+pub fn touch(target: &str, time: SystemTime) -> Result<(), std::io::Error> {
     let ftime = filetime::FileTime::from(time);
     filetime::set_file_times(target, ftime, ftime)
 }

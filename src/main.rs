@@ -35,7 +35,9 @@ struct ImportCommand {
     host: String,
     #[arg(long, short, default_value_t = false)]
     compact: bool,
-    #[arg(long, short, default_value_t = true)]
+    #[arg(help = "disable touch file timestamp.")]
+    #[arg(short, long = "no-touch", default_value_t = true)]
+    #[arg(action=clap::ArgAction::SetFalse)]
     touch: bool,
 }
 
@@ -97,10 +99,10 @@ pub struct RenameCommand {
     #[arg(short, long, default_value_t = false)]
     #[arg(help = "rename in compact one mode")]
     compact: bool,
-    #[arg(short, long, default_value_t = true)]
-    #[arg(help = "touch file and dir timestamp")]
+    #[arg(help = "disable touch file timestamp.")]
+    #[arg(short, long = "no-touch", default_value_t = true)]
+    #[arg(action=clap::ArgAction::SetFalse)]
     touch: bool,
-
 }
 
 fn cmd_rename(cmd: &RenameCommand) -> CmdResult {

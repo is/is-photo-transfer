@@ -143,7 +143,13 @@ fn build_rename_map(
 
         if !file_stem.eq(&meta_name) {
             println!("{level} - {full_path:?} -> {}.{}", meta_name, file_ext);
-            name_map.insert(file_stem, RenameEntry{name:meta_name, meta});
+            name_map.insert(
+                file_stem,
+                RenameEntry {
+                    name: meta_name,
+                    meta,
+                },
+            );
         } else {
             println!("{level} - {full_path:?} -> HOLD")
         }
@@ -188,7 +194,7 @@ fn do_rename_files(
     }
 }
 
-fn do_rename(req: &Request, src: &str, dest: &str, meta:&Info) -> Result<(), std::io::Error> {
+fn do_rename(req: &Request, src: &str, dest: &str, meta: &Info) -> Result<(), std::io::Error> {
     std::fs::rename(src, dest)?;
     if !req.compact && req.touch {
         crate::core::touch::touch(dest, meta.to_systemtime())?
