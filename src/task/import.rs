@@ -88,10 +88,12 @@ impl<'a> Task<'a> {
 
         let src_dir = src_dir.to_string();
 
+        let mut files: Vec<PathBuf> = Vec::new();
+
         for entry in glob::glob(&src_pattern).expect("Failed to read glob pattern") {
             match entry {
                 Ok(path) => {
-                    self.copy(&path)?;
+                    files.push(path);
                 }
                 Err(e) => {
                     println!("{:?}", e);
@@ -99,9 +101,11 @@ impl<'a> Task<'a> {
             }
         }
 
-        println!("{}: {}", src_dir, src_pattern);
-
-        Err(ImportError::Ok)
+        println!("{src_dir} has {} photos", files.len());
+        for file in &files {
+            self.copy(file)?;
+        }
+        Err(())
     }
 }
 
