@@ -1,4 +1,4 @@
-use std::fs::{self, File};
+use std::fs::{self};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -9,6 +9,7 @@ pub struct Request {
     pub dest: PathBuf,
     pub compact: bool,
     pub touch: bool,
+    pub rename: bool,
 }
 
 pub struct Response {}
@@ -56,7 +57,12 @@ impl<'a> Task<'a> {
         }
         let dest = Path::new(&dest_str);
         if !dest.is_file() {
-            let r = fs::copy(src, &dest);
+            let r = if !self.request.rename {
+                fs::copy(src, &dest)
+            } else {
+                fs::rename(src, &dest).map(|_| 0)
+            };
+
             let metadata = fs::metadata(&src_str).unwrap();
             if self.request.touch {
                 crate::core::touch::touch(&dest_str, metadata.created().unwrap()).unwrap();

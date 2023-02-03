@@ -39,6 +39,8 @@ struct ImportCommand {
     #[arg(short, long = "no-touch", default_value_t = true)]
     #[arg(action=clap::ArgAction::SetFalse)]
     touch: bool,
+    #[arg(long, short, default_value_t = false)]
+    rename: bool,
 }
 
 type CmdResult = Result<(), Box<dyn Error>>;
@@ -71,15 +73,16 @@ fn cmd_import_dest_dir(cmd: &ImportCommand) -> String {
 fn cmd_import(cmd: &ImportCommand) -> CmdResult {
     let source = PathBuf::from(cmd_import_source_dir(cmd));
     let dest = PathBuf::from(cmd_import_dest_dir(cmd));
-    let compact = cmd.compact;
-    let touch = cmd.touch;
+    // let compact = cmd.compact;
+    // let touch = cmd.touch;
 
     println!("name:{:?}, source:{:?}, dest:{:?}", cmd.host, source, dest);
     let mut req = task::import::Request {
         source,
         dest,
-        compact,
-        touch,
+        compact: cmd. compact,
+        touch: cmd.touch,
+        rename: cmd.rename,
     };
     task::import::import(&mut req)?;
     Ok(())
