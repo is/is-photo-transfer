@@ -118,12 +118,23 @@ impl Info {
         }
     }
 
+    pub fn convert_v1_model_to_v2(model: &str) -> &str {
+        if model == "A" {
+            "A7R4A"
+        } else if model == "B" {
+            "A6400"
+        } else if model == "I" {
+            "IP"
+        } else {
+            model
+        }
+    }
+
     pub fn from_path(path: &str) -> Option<Self> {
         let (_dir, file_stem, file_ext) = split_path_2(path)?;
-
         if let Some(captures) = FILE_NAME_PATTERN_V1.captures(file_stem) {
             return Some(Self {
-                model: captures.get(1)?.as_str().to_string(),
+                model: Self::convert_v1_model_to_v2(captures.get(1)?.as_str()).to_string(),
                 datetime: captures.get(3)?.as_str().to_string(),
                 number: captures.get(2)?.as_str().to_string(),
                 ext: file_ext_normal(file_ext),
