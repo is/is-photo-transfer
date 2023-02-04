@@ -2,7 +2,27 @@ use std::fs::{self};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use clap::Parser;
+
 use crate::core::fninfo;
+
+// ====
+#[derive(Parser)]
+pub struct ImportCommand {
+    pub source: Option<String>,
+    pub dest: Option<String>,
+    #[arg(long, default_value_t=String::from("mac"))]
+    pub host: String,
+    #[arg(long, short, default_value_t = false)]
+    pub compact: bool,
+    #[arg(help = "disable touch file timestamp.")]
+    #[arg(short, long = "no-touch", default_value_t = true)]
+    #[arg(action=clap::ArgAction::SetFalse)]
+    pub touch: bool,
+    #[arg(long, short, default_value_t = false)]
+    pub rename: bool,
+}
+
 
 pub struct Request {
     pub source: PathBuf,
@@ -105,16 +125,21 @@ impl<'a> Task<'a> {
             }
         }
 
-        println!("{src_dir} has {} photos", files.len());
+        println!(
+            "[IMPORT] {} to {}, {} photos",
+            src_dir,
+            self.request.dest.to_str().unwrap(),
+            files.len()
+        );
         for file in &files {
             self.copy(file)?;
         }
-        Ok(Response{})
+        Ok(Response {})
     }
 }
 
 pub fn import(request: &mut Request) -> Result<Response, ImportError> {
-    println!("THIS IS import ACTION");
+    // println!("THIS IS import ACTION");
     let mut task = Task { request };
     task.run()
 }

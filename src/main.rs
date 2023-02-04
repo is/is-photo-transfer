@@ -1,10 +1,12 @@
 mod core;
 mod task;
+mod command;
 
 use std::error::Error;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use task::import::ImportCommand;
 
 use crate::core::utils;
 
@@ -27,21 +29,7 @@ enum Commands {
 }
 
 // ---- IMPORT ----
-#[derive(Parser)]
-struct ImportCommand {
-    source: Option<String>,
-    dest: Option<String>,
-    #[arg(long, default_value_t=String::from("mac"))]
-    host: String,
-    #[arg(long, short, default_value_t = false)]
-    compact: bool,
-    #[arg(help = "disable touch file timestamp.")]
-    #[arg(short, long = "no-touch", default_value_t = true)]
-    #[arg(action=clap::ArgAction::SetFalse)]
-    touch: bool,
-    #[arg(long, short, default_value_t = false)]
-    rename: bool,
-}
+
 
 type CmdResult = Result<(), Box<dyn Error>>;
 
@@ -80,7 +68,7 @@ fn cmd_import(cmd: &ImportCommand) -> CmdResult {
     let mut req = task::import::Request {
         source,
         dest,
-        compact: cmd. compact,
+        compact: cmd.compact,
         touch: cmd.touch,
         rename: cmd.rename,
     };
