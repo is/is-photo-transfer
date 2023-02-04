@@ -1,10 +1,10 @@
 use std::{collections::HashMap, path::Path};
 
 use clap::Parser;
-use walkdir::{DirEntry, WalkDir};
 
 use crate::cmd::{Cmd, CmdResult};
 use crate::core::fninfo::Info;
+use crate::core::scandir::{scan as scan_dir, DirEntry};
 
 // ==== COMMAND ====
 #[derive(Parser, Debug)]
@@ -27,8 +27,8 @@ pub struct RenameCommand {
 }
 
 impl Cmd for RenameCommand {
-    fn run(&self) -> CmdResult {
-        do_rename(&Request::from(self))?;
+    fn run(self) -> CmdResult {
+        do_rename(&Request::from(&self))?;
         Ok(())
     }
 }
@@ -100,28 +100,6 @@ fn walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), RenameE
         do_rename_files(req, level, preview_dir, &pfiles, &name_map);
     }
     Ok(())
-}
-
-fn scan_dir(dir: &Path) -> (Vec<DirEntry>, Vec<DirEntry>) {
-    let mut files: Vec<DirEntry> = Vec::new();
-    let mut dirs: Vec<DirEntry> = Vec::new();
-    let walker = WalkDir::new(dir)
-        .max_depth(1)
-        .min_depth(1)
-        .sort_by_file_name();
-
-    for entry in walker {
-        if let Ok(e) = entry {
-            if e.file_type().is_dir() {
-                if e.path().file_name().unwrap() != "preview" {
-                    dirs.push(e)
-                }
-            } else {
-                files.push(e)
-            }
-        }
-    }
-    (files, dirs)
 }
 
 fn build_rename_map(

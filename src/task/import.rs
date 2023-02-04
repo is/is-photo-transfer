@@ -50,8 +50,8 @@ fn cmd_import_dest_dir(cmd: &ImportCommand) -> String {
 }
 
 impl Cmd for ImportCommand {
-    fn run(&self) -> CmdResult {
-        let cmd = self;
+    fn run(self) -> CmdResult {
+        let cmd = &self;
         let source = PathBuf::from(cmd_import_source_dir(cmd));
         let dest = PathBuf::from(cmd_import_dest_dir(cmd));
         // let compact = cmd.compact;

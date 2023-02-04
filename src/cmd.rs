@@ -29,7 +29,7 @@ pub enum Commands {
 }
 
 pub trait Cmd {
-    fn run(&self) -> CmdResult;
+    fn run(self) -> CmdResult;
 }
 
 pub fn run() -> CmdResult {
