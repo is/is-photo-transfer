@@ -10,20 +10,20 @@ use crate::core::fninfo::Info;
 #[derive(Parser, Debug)]
 pub struct RenameCommand {
     #[arg(default_value = ".")]
-    pub dir: String,
+    dir: String,
     #[arg(short, long, default_value_t = false)]
     #[arg(help = "update information from exif")]
-    pub exif: bool,
+    exif: bool,
     #[arg(short, long, default_value_t = false)]
     #[arg(help = "show what would have been renamed")]
-    pub dry: bool,
+    dry: bool,
     #[arg(short, long, default_value_t = false)]
     #[arg(help = "rename in compact one mode")]
-    pub compact: bool,
+    compact: bool,
     #[arg(help = "disable touch file timestamp.")]
     #[arg(short, long = "no-touch", default_value_t = true)]
     #[arg(action=clap::ArgAction::SetFalse)]
-    pub touch: bool,
+    touch: bool,
 }
 
 impl Command for RenameCommand {

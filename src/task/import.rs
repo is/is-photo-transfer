@@ -10,18 +10,18 @@ use crate::core::{fninfo, utils};
 // ==== COMMAND ====
 #[derive(Parser)]
 pub struct ImportCommand {
-    pub source: Option<String>,
-    pub dest: Option<String>,
+    source: Option<String>,
+    dest: Option<String>,
     #[arg(long, default_value_t=String::from("mac"))]
-    pub host: String,
+    host: String,
     #[arg(long, short, default_value_t = false)]
-    pub compact: bool,
+    compact: bool,
     #[arg(help = "disable touch file timestamp.")]
     #[arg(short, long = "no-touch", default_value_t = true)]
     #[arg(action=clap::ArgAction::SetFalse)]
-    pub touch: bool,
+    touch: bool,
     #[arg(long, short, default_value_t = false)]
-    pub rename: bool,
+    rename: bool,
 }
 
 fn cmd_import_source_dir(cmd: &ImportCommand) -> String {
