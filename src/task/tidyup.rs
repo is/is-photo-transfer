@@ -1,8 +1,11 @@
 use std::path::Path;
 
-use crate::core::scandir::{scan as scan_dir, DirEntry};
+use crate::core::{
+    scandir::{scan as scan_dir, DirEntry},
+    utils,
+};
 
-use clap::Parser;
+use clap::{Parser, ArgAction};
 
 use crate::cmd::{Cmd, CmdResult};
 
@@ -23,7 +26,8 @@ pub struct TidyupCommand {
     touch: bool,
     #[arg(short, long, default_value_t = false)]
     usemove: bool,
-    #[arg(short, long, default_value_t = true)]
+    #[arg(short, long="no-year", default_value_t = true)]
+    #[arg(action=ArgAction::SetFalse)]
     year: bool,
 }
 
@@ -65,8 +69,52 @@ impl Task {
         }
     }
 
-    fn file(&self, _dir: &Path, _dest: &Path, _entry: &DirEntry, 
-        _level: i32, _order: i32) {
+    fn file(&self, _dir: &Path, _dest: &Path, entry: &DirEntry, _level: i32, order: i32) {
+        let path = entry.path();
+        let path_str = path.to_str().unwrap();
+        let msg_head = format!("F,{},{}", order, path.to_str().unwrap());
+
+        let file_ext = if let Some(ext) = path.extension() {
+            ext.to_ascii_uppercase()
+        } else {
+            return;
+        };
+
+        let file_ext = file_ext.to_str().unwrap().to_string();
+        if !utils::is_img_ext(file_ext.to_ascii_lowercase()) {
+            return;
+        }
+
+        let meta_res = crate::core::fninfo::from(path_str);
+        if meta_res.is_err() {
+            println!("{msg_head},ERR");
+            return;
+        }
+
+        let meta = meta_res.unwrap();
+        let meta = if self.cmd.exif {
+            meta.update_from_exif(path_str)
+        } else {
+            meta
+        };
+
         
+        let cmd = &self.cmd;
+        let date_str = meta.to_date();
+        
+        let new_name = if cmd.compact {
+            meta.to_compact_name()
+        } else {
+            meta.to_name()
+        };
+
+        let full_dest = if cmd.year {
+            let year_str = date_str[0..4].to_string();
+            format!("{year_str}/{date_str}/{new_name}")
+        } else {
+            format!("{date_str}/{new_name}")
+        };
+
+        println!("{msg_head},OK,{full_dest}");
     }
 }

@@ -265,6 +265,14 @@ impl Info {
         let date = date.and_local_timezone(chrono::offset::Local).unwrap();
         SystemTime::from(date)
     }
+
+    pub fn to_date(&self) -> String {
+        self.datetime[0..8].to_string()
+    }
+
+    pub fn to_time(&self) -> String {
+        self.datetime[9..15].to_string()
+    }
 }
 
 #[cfg(test)]
