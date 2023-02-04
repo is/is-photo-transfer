@@ -4,9 +4,10 @@ use std::time::Instant;
 
 use clap::Parser;
 
-use crate::core::fninfo;
+use crate::cmd::{Command, CommandResult};
+use crate::core::{fninfo, utils};
 
-// ====
+// ==== COMMAND ====
 #[derive(Parser)]
 pub struct ImportCommand {
     pub source: Option<String>,
@@ -23,7 +24,53 @@ pub struct ImportCommand {
     pub rename: bool,
 }
 
+fn cmd_import_source_dir(cmd: &ImportCommand) -> String {
+    match cmd.source.as_ref() {
+        Some(s) => s.clone(),
+        #[rustfmt::skip]
+        _ => match cmd.host.as_str() {
+            "mac" => "/Volumns/Untitled",
+            _ => "/Volumns/Untitled",
+        }.to_string(),
+    }
+}
 
+fn cmd_import_dest_dir(cmd: &ImportCommand) -> String {
+    if let Some(s) = cmd.dest.as_ref() {
+        s.clone()
+    } else {
+        let home = utils::env_var("HOME").unwrap();
+        match cmd.host.as_str() {
+            // "mac" => format!("{home}/PI"),
+            // "hi" => format!("{home}/PI"),
+            // "mi2" => format!("{home}/PI"),
+            _ => format!("{home}/PI"),
+        }
+    }
+}
+
+impl Command for ImportCommand {
+    fn run(&self) -> CommandResult {
+        let cmd = self;
+        let source = PathBuf::from(cmd_import_source_dir(cmd));
+        let dest = PathBuf::from(cmd_import_dest_dir(cmd));
+        // let compact = cmd.compact;
+        // let touch = cmd.touch;
+
+        println!("name:{:?}, source:{:?}, dest:{:?}", cmd.host, source, dest);
+        let mut req = Request {
+            source,
+            dest,
+            compact: cmd.compact,
+            touch: cmd.touch,
+            rename: cmd.rename,
+        };
+        do_import(&mut req)?;
+        Ok(())
+    }
+}
+
+// ==== TASK ====
 pub struct Request {
     pub source: PathBuf,
     pub dest: PathBuf,
@@ -138,7 +185,7 @@ impl<'a> Task<'a> {
     }
 }
 
-pub fn import(request: &mut Request) -> Result<Response, ImportError> {
+pub fn do_import(request: &mut Request) -> Result<Response, ImportError> {
     // println!("THIS IS import ACTION");
     let mut task = Task { request };
     task.run()

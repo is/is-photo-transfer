@@ -1,8 +1,39 @@
 use std::{collections::HashMap, path::Path};
 
+use clap::Parser;
 use walkdir::{DirEntry, WalkDir};
 
+use crate::cmd::{Command, CommandResult};
 use crate::core::fninfo::Info;
+
+// ==== COMMAND ====
+#[derive(Parser, Debug)]
+pub struct RenameCommand {
+    #[arg(default_value = ".")]
+    pub dir: String,
+    #[arg(short, long, default_value_t = false)]
+    #[arg(help = "update information from exif")]
+    pub exif: bool,
+    #[arg(short, long, default_value_t = false)]
+    #[arg(help = "show what would have been renamed")]
+    pub dry: bool,
+    #[arg(short, long, default_value_t = false)]
+    #[arg(help = "rename in compact one mode")]
+    pub compact: bool,
+    #[arg(help = "disable touch file timestamp.")]
+    #[arg(short, long = "no-touch", default_value_t = true)]
+    #[arg(action=clap::ArgAction::SetFalse)]
+    pub touch: bool,
+}
+
+impl Command for RenameCommand {
+    fn run(&self) -> CommandResult {
+        do_rename(&Request::from(self))?;
+        Ok(())
+    }
+}
+
+// ==== TASK ====
 
 #[derive(thiserror::Error, Debug)]
 pub enum RenameError {
@@ -31,13 +62,13 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn from(item: &crate::RenameCommand) -> Self {
+    pub fn from(cmd: &RenameCommand) -> Self {
         Request {
-            dir: item.dir.clone(),
-            exif: item.exif,
-            dry: item.dry,
-            compact: item.compact,
-            touch: item.touch,
+            dir: cmd.dir.clone(),
+            exif: cmd.exif,
+            dry: cmd.dry,
+            compact: cmd.compact,
+            touch: cmd.touch,
         }
     }
 }
@@ -49,14 +80,14 @@ struct RenameEntry {
 
 type _Error = RenameError;
 
-fn do_walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), RenameError> {
+fn walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), RenameError> {
     let dir = dir.as_ref();
     let (files, dirs) = scan_dir(dir);
 
     // scan subdirectory
     for entry in dirs {
         println!("{} dirs - {}", level, entry.path().to_str().unwrap());
-        do_walk(req, level + 1, entry.path())?;
+        walk(req, level + 1, entry.path())?;
     }
 
     let name_map: HashMap<String, RenameEntry> = build_rename_map(req, level, dir, &files);
@@ -113,7 +144,7 @@ fn build_rename_map(
         let file_ext = file_ext.unwrap().to_str().unwrap().to_string();
         let file_ext_lower = file_ext.to_ascii_lowercase();
 
-        let is_img = crate::utils::is_img_ext(file_ext_lower);
+        let is_img = crate::core::utils::is_img_ext(file_ext_lower);
 
         if !is_img {
             println!("{level} - {full_path:?} - NO.IMG");
@@ -186,7 +217,7 @@ fn do_rename_files(
                 let new_fn = format!("{base_dir}/{name}.{file_ext}");
                 println!("RENAME {file_path} -> {new_fn}");
                 if !req.dry {
-                    do_rename(req, file_path, &new_fn, &r.meta).expect("do_rename_faile");
+                    rename(req, file_path, &new_fn, &r.meta).expect("do_rename_faile");
                 }
             }
             None => (),
@@ -194,7 +225,7 @@ fn do_rename_files(
     }
 }
 
-fn do_rename(req: &Request, src: &str, dest: &str, meta: &Info) -> Result<(), std::io::Error> {
+fn rename(req: &Request, src: &str, dest: &str, meta: &Info) -> Result<(), std::io::Error> {
     std::fs::rename(src, dest)?;
     if !req.compact && req.touch {
         crate::core::touch::touch(dest, meta.to_systemtime())?
@@ -202,6 +233,6 @@ fn do_rename(req: &Request, src: &str, dest: &str, meta: &Info) -> Result<(), st
     Ok(())
 }
 
-pub fn rename(req: &Request) -> Result<(), RenameError> {
-    do_walk(req, 0, &req.dir)
+pub fn do_rename(req: &Request) -> Result<(), RenameError> {
+    walk(req, 0, &req.dir)
 }
