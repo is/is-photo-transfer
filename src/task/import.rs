@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use clap::Parser;
 
-use crate::cmd::{Command, CommandResult};
+use crate::cmd::{Cmd, CmdResult};
 use crate::core::{fninfo, utils};
 
 // ==== COMMAND ====
@@ -49,8 +49,8 @@ fn cmd_import_dest_dir(cmd: &ImportCommand) -> String {
     }
 }
 
-impl Command for ImportCommand {
-    fn run(&self) -> CommandResult {
+impl Cmd for ImportCommand {
+    fn run(&self) -> CmdResult {
         let cmd = self;
         let source = PathBuf::from(cmd_import_source_dir(cmd));
         let dest = PathBuf::from(cmd_import_dest_dir(cmd));

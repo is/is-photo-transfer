@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::Path};
 use clap::Parser;
 use walkdir::{DirEntry, WalkDir};
 
-use crate::cmd::{Command, CommandResult};
+use crate::cmd::{Cmd, CmdResult};
 use crate::core::fninfo::Info;
 
 // ==== COMMAND ====
@@ -26,8 +26,8 @@ pub struct RenameCommand {
     touch: bool,
 }
 
-impl Command for RenameCommand {
-    fn run(&self) -> CommandResult {
+impl Cmd for RenameCommand {
+    fn run(&self) -> CmdResult {
         do_rename(&Request::from(self))?;
         Ok(())
     }
