@@ -56,7 +56,8 @@ impl Task {
 
     fn dir(&self, dir: &Path, dest: &Path, level: i32) -> CmdResult {
         let (files, dirs) = scan_dir(dir);
-
+        println!("D,{},ENTER,{},{}", 
+            dir.to_str().unwrap(), dirs.len(), files.len());
         for e in &dirs {
             Self::dir(self, e.path(), dest, level + 1)?;
         }
@@ -141,10 +142,12 @@ impl Task {
             }
         }
 
+        // println!("{msg_head},OK,{full_dest},{}", start.elapsed().as_millis());
+
         if cmd.docopy {
             std::fs::copy(path, &dest_path)?;
         } else {
-            std::fs::rename(path, &dest_str)?;
+            std::fs::rename(path, &dest_path)?;
         };
 
         if cmd.touch {
