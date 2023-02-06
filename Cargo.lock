@@ -21,6 +21,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "armory-photo"
+version = "0.1.0"
+dependencies = [
+ "assert_matches",
+ "chrono",
+ "clap",
+ "filetime",
+ "glob",
+ "hex-literal",
+ "kamadak-exif",
+ "lazy_static",
+ "phf",
+ "plist",
+ "regex",
+ "serde",
+ "sha2",
+ "thiserror",
+ "walkdir",
+]
+
+[[package]]
 name = "assert_matches"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -330,27 +351,6 @@ checksum = "e7d6c6f8c91b4b9ed43484ad1a938e393caf35960fce7f82a040497207bd8e9e"
 dependencies = [
  "libc",
  "windows-sys",
-]
-
-[[package]]
-name = "is-photos"
-version = "0.1.0"
-dependencies = [
- "assert_matches",
- "chrono",
- "clap",
- "filetime",
- "glob",
- "hex-literal",
- "kamadak-exif",
- "lazy_static",
- "phf",
- "plist",
- "regex",
- "serde",
- "sha2",
- "thiserror",
- "walkdir",
 ]
 
 [[package]]
