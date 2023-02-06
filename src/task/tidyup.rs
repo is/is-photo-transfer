@@ -36,9 +36,7 @@ pub struct TidyupCommand {
 impl Cmd for TidyupCommand {
     fn run(self) -> CmdResult {
         let mut task = Task { cmd: self };
-
-        task.run();
-        Ok(())
+        task.run()
     }
 }
 
@@ -48,30 +46,30 @@ struct Task {
 }
 
 impl Task {
-    fn run(&mut self) {
+    fn run(&mut self) -> CmdResult {
         let src = self.cmd.source.clone();
         // let dest = self.cmd.dest.clone()
         //     .unwrap_or_else(|| src.clone());
         let dest = self.cmd.dest.as_ref().unwrap_or(&src).clone();
-
-        self.dir(Path::new(&src), Path::new(&dest), 0);
+        self.dir(Path::new(&src), Path::new(&dest), 0)
     }
 
-    fn dir(&self, dir: &Path, dest: &Path, level: i32) {
+    fn dir(&self, dir: &Path, dest: &Path, level: i32) -> CmdResult {
         let (files, dirs) = scan_dir(dir);
 
         for e in &dirs {
-            Self::dir(self, e.path(), dest, level + 1);
+            Self::dir(self, e.path(), dest, level + 1)?;
         }
 
         let mut file_num = files.len() as i32;
         for f in &files {
-            self.file(dir, dest, f, level, file_num);
+            self.file(dir, dest, f, level, file_num)?;
             file_num = file_num - 1;
         }
+        Ok(())
     }
 
-    fn file(&self, _dir: &Path, dest: &Path, entry: &DirEntry, _level: i32, order: i32) {
+    fn file(&self, _dir: &Path, dest: &Path, entry: &DirEntry, _level: i32, order: i32) -> CmdResult {
         let path = entry.path();
         let path_str = path.to_str().unwrap();
         let msg_head = format!("F,{},{}", order, path_str);
@@ -79,12 +77,12 @@ impl Task {
         let file_ext = if let Some(ext) = path.extension() {
             ext.to_ascii_uppercase()
         } else {
-            return;
+            return Ok(());
         };
 
         let file_ext = file_ext.to_str().unwrap().to_string();
         if !utils::is_img_ext(file_ext.to_ascii_lowercase()) {
-            return;
+            return Ok(());
         }
 
         let start = Instant::now();
@@ -92,7 +90,7 @@ impl Task {
         let meta_res = crate::core::fninfo::from(path_str);
         if meta_res.is_err() {
             println!("{msg_head},ERR");
-            return;
+            return Ok(());
         }
 
         let meta = meta_res.unwrap();
@@ -123,7 +121,7 @@ impl Task {
 
         if cmd.dry {
             println!("{msg_head},OK,{full_dest},{}", start.elapsed().as_millis());
-            return;
+            return Ok(());
         }
 
         if dest_path.is_file() {
@@ -131,7 +129,7 @@ impl Task {
                 "{msg_head},SKIP,{full_dest},{}",
                 start.elapsed().as_millis()
             );
-            return;
+            return Ok(());
         }
 
         if let Some(parent) = dest_path.parent() {
@@ -143,26 +141,16 @@ impl Task {
             }
         }
 
-        let err = if cmd.docopy {
-            let s = std::fs::copy(path, &dest_path);
-            if let Err(e) = s {
-                println!("{:?}", e);
-                true
-            } else {
-                false
-            }
+        if cmd.docopy {
+            std::fs::copy(path, &dest_path)?;
         } else {
-            std::fs::rename(path, &dest_str).is_err()
-        };
-
-        if err {
-            println!("{msg_head},ERROR,{full_dest}");
-            return;
+            std::fs::rename(path, &dest_str)?;
         };
 
         if cmd.touch {
-            crate::core::touch::touch(&dest_str, meta.to_systemtime()).unwrap();
+            crate::core::touch::touch(&dest_str, meta.to_systemtime())?;
         }
         println!("{msg_head},OK,{full_dest},{}", start.elapsed().as_millis());
+        Ok(())
     }
 }
