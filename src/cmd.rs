@@ -11,7 +11,7 @@ pub type CmdResult = Result<(), Box<dyn Error>>;
 #[derive(Parser)]
 #[command(name = "is-armory-photo")]
 #[command(author = "Yu Xin <scaner@gmail.com>")]
-#[command(version = "0.1.1", about = "I.S. Photo Armory")]
+#[command(version = crate::VERSION, about = "I.S. Photo Armory")]
 #[command(about="Photograph toolbox", long_about=None)]
 pub struct Cli {
     #[command(subcommand)]

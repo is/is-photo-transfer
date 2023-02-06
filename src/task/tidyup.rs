@@ -56,8 +56,13 @@ impl Task {
 
     fn dir(&self, dir: &Path, dest: &Path, level: i32) -> CmdResult {
         let (files, dirs) = scan_dir(dir);
-        println!("D,{},ENTER,{},{}", 
-            dir.to_str().unwrap(), dirs.len(), files.len());
+        println!(
+            "D,{},ENTR,{},{},{}",
+            level,
+            dir.to_str().unwrap(),
+            dirs.len(),
+            files.len()
+        );
         for e in &dirs {
             Self::dir(self, e.path(), dest, level + 1)?;
         }
@@ -70,10 +75,17 @@ impl Task {
         Ok(())
     }
 
-    fn file(&self, _dir: &Path, dest: &Path, entry: &DirEntry, _level: i32, order: i32) -> CmdResult {
+    fn file(
+        &self,
+        _dir: &Path,
+        dest: &Path,
+        entry: &DirEntry,
+        _level: i32,
+        order: i32,
+    ) -> CmdResult {
         let path = entry.path();
         let path_str = path.to_str().unwrap();
-        let msg_head = format!("F,{},{}", order, path_str);
+        // let msg_head = format!("F,{},{}", order, path_str);
 
         let file_ext = if let Some(ext) = path.extension() {
             ext.to_ascii_uppercase()
@@ -90,7 +102,7 @@ impl Task {
 
         let meta_res = crate::core::fninfo::from(path_str);
         if meta_res.is_err() {
-            println!("{msg_head},ERR");
+            println!("F,{order},METAERR,{path_str}");
             return Ok(());
         }
 
@@ -121,13 +133,13 @@ impl Task {
         let full_dest = dest_path.to_str().unwrap();
 
         if cmd.dry {
-            println!("{msg_head},OK,{full_dest},{}", start.elapsed().as_millis());
+            println!("F,{order},MOVE,{path_str},{full_dest},{}", start.elapsed().as_millis());
             return Ok(());
         }
 
         if dest_path.is_file() {
             println!(
-                "{msg_head},SKIP,{full_dest},{}",
+                "F,{order},SKIP,{path_str},{full_dest},{}",
                 start.elapsed().as_millis()
             );
             return Ok(());
@@ -153,7 +165,7 @@ impl Task {
         if cmd.touch {
             crate::core::touch::touch(&dest_str, meta.to_systemtime())?;
         }
-        println!("{msg_head},OK,{full_dest},{}", start.elapsed().as_millis());
+        println!("F,{order},MOVE,{path_str},{full_dest},{}", start.elapsed().as_millis());
         Ok(())
     }
 }
