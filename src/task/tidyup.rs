@@ -22,7 +22,9 @@ pub struct TidyupCommand {
     dry: bool,
     #[arg(short, long, default_value_t = false)]
     compact: bool,
-    #[arg(short, long, default_value_t = false)]
+    #[arg(help = "disable touch file timestamp.")]
+    #[arg(short, long = "no-touch", default_value_t = true)]
+    #[arg(action=clap::ArgAction::SetFalse)]
     touch: bool,
     #[arg(short = 'D', long, default_value_t = false)]
     docopy: bool,
