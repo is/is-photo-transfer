@@ -20,11 +20,11 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    #[command(about = "Import photographs from Camera")]
+    #[command(about = "Import photos from Camera")]
     Import(ImportCommand),
-    #[command(about = "Rename photo in the directory")]
+    #[command(about = "Rename photos in the directories")]
     Rename(RenameCommand),
-    #[command(about = "Tidyup photo in the directory")]
+    #[command(about = "Tidyup photos in the directories")]
     Tidyup(TidyupCommand),
 }
 

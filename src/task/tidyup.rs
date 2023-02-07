@@ -133,7 +133,10 @@ impl Task {
         let full_dest = dest_path.to_str().unwrap();
 
         if cmd.dry {
-            println!("F,{order},MOVE,{path_str},{full_dest},{}", start.elapsed().as_millis());
+            println!(
+                "F,{order},MOVE,{path_str},{full_dest},{}",
+                start.elapsed().as_millis()
+            );
             return Ok(());
         }
 
@@ -165,7 +168,10 @@ impl Task {
         if cmd.touch {
             crate::core::touch::touch(&dest_str, meta.to_systemtime())?;
         }
-        println!("F,{order},MOVE,{path_str},{full_dest},{}", start.elapsed().as_millis());
+        println!(
+            "F,{order},MOVE,{path_str},{full_dest},{}",
+            start.elapsed().as_millis()
+        );
         Ok(())
     }
 }
