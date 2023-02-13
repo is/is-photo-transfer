@@ -9,7 +9,7 @@ use crate::task::tidyup::TidyupCommand;
 pub type CmdResult = Result<(), Box<dyn Error>>;
 
 #[derive(Parser)]
-#[command(name = "is-armory-photo")]
+#[command(name = "iphoto")]
 #[command(author = "Yu Xin <scaner@gmail.com>")]
 #[command(version = crate::VERSION, about = "I.S. Photo Armory")]
 #[command(about="Photograph toolbox", long_about=None)]
