@@ -166,7 +166,7 @@ impl Task {
         };
 
         if cmd.touch {
-            crate::core::touch::touch(&dest_str, meta.to_systemtime())?;
+            crate::core::touch::touch(dest_path.to_str().unwrap(), meta.to_systemtime())?;
         }
         println!(
             "F,{order},MOVE,{path_str},{full_dest},{}",
