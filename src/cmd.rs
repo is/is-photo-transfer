@@ -6,6 +6,8 @@ use crate::task::import::ImportCommand;
 use crate::task::rename::RenameCommand;
 use crate::task::tidyup::TidyupCommand;
 
+use crate::task::rename2::Rename2Command;
+
 pub type CmdResult = Result<(), Box<dyn Error>>;
 
 #[derive(Parser)]
@@ -24,8 +26,11 @@ pub enum Commands {
     Import(ImportCommand),
     #[command(about = "Rename photos in the directories")]
     Rename(RenameCommand),
+    #[command(about = "Rename photos in the directories, v2")]
+    Rename2(Rename2Command),
     #[command(about = "Tidyup photos in the directories")]
     Tidyup(TidyupCommand),
+    
 }
 
 pub trait Cmd {
