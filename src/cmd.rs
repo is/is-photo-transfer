@@ -43,6 +43,7 @@ pub fn run() -> CmdResult {
     match cli.command {
         Some(Commands::Import(cmd)) => cmd.run(),
         Some(Commands::Rename(cmd)) => cmd.run(),
+        Some(Commands::Rename2(cmd)) => cmd.run(),
         Some(Commands::Tidyup(cmd)) => cmd.run(),
         _ => Ok(()),
     }

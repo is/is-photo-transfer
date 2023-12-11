@@ -91,13 +91,13 @@ fn walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), RenameE
     }
 
     let name_map: HashMap<String, RenameEntry> = build_rename_map(req, level, dir, &files);
-    do_rename_files(req, level, dir, &files, &name_map);
+    do_rename_files(req, level, dir, &files, &name_map, false);
 
     let preview = dir.join("preview");
     if preview.is_dir() {
         let preview_dir = preview.as_path();
         let (pfiles, _) = scan_dir(preview_dir);
-        do_rename_files(req, level, preview_dir, &pfiles, &name_map);
+        do_rename_files(req, level, preview_dir, &pfiles, &name_map, true);
     }
     Ok(())
 }
@@ -129,7 +129,14 @@ fn build_rename_map(
             continue;
         }
 
-        let meta = crate::core::fninfo::from(&full_path);
+        let is_enhanced: bool = _file_name.contains("Enhanced-NR");
+        if is_enhanced {
+            println!("{level} - {full_path:?} - ENHANCED-NR");
+            continue;
+        }
+
+
+        let meta: Result<Info, crate::core::fninfo::InfoErr> = crate::core::fninfo::from(&full_path);
         if meta.is_err() {
             println!("{level} - {full_path:?} - MISS.META");
             continue;
@@ -172,8 +179,9 @@ fn do_rename_files(
     dir: &Path,
     files: &Vec<DirEntry>,
     map: &HashMap<String, RenameEntry>,
+    preview: bool,
 ) {
-    if map.len() == 0 || files.len() == 0 {
+    if !preview && (map.len() == 0 || files.len() == 0) {
         return;
     }
 
@@ -187,9 +195,18 @@ fn do_rename_files(
         if file_ext.is_none() {
             break;
         }
-        let file_ext = file_ext.unwrap().to_str().unwrap();
 
-        match map.get(&file_stem) {
+        let file_ext = file_ext.unwrap().to_str().unwrap();
+        // println!("file_stem: {file_stem}");
+        let enhanced = file_stem.contains("Enhanced-NR");
+        
+        let file_stem2 = if enhanced && preview {
+            file_stem.to_string().replace("-Enhanced-NR", "")
+        } else {
+            file_stem.to_string()
+        };
+    
+        match map.get(&file_stem2) {
             Some(r) => {
                 let name = &r.name;
                 let new_fn = format!("{base_dir}/{name}.{file_ext}");
@@ -198,7 +215,16 @@ fn do_rename_files(
                     rename(req, file_path, &new_fn, &r.meta).expect("do_rename_faile");
                 }
             }
-            None => (),
+            None => {
+                if enhanced && preview {
+                    let new_fn = format!("{base_dir}/{file_stem2}.{file_ext}");
+                    println!("RENAME {file_path} -> {new_fn}");
+                    let meta = crate::core::fninfo::from(file_path).unwrap();
+                    if !req.dry {
+                        rename(req, file_path, &new_fn, &meta).expect("do_rename_enhanced_failed");
+                    }
+                }
+            }
         }
     }
 }
