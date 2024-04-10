@@ -130,8 +130,9 @@ impl<'a> Task<'a> {
                 fs::rename(src, &dest).map(|_| 0)
             };
 
-            let metadata = fs::metadata(&src_str).unwrap();
-            if self.request.touch {
+            // println!("SRC->{src_str}");
+            if self.request.touch && !self.request.rename {
+                let metadata = fs::metadata(&src_str).unwrap();
                 crate::core::touch::touch(&dest_str, metadata.created().unwrap()).unwrap();
             }
             println!(
