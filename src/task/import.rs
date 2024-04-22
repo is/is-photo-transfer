@@ -6,6 +6,7 @@ use clap::Parser;
 
 use crate::cmd::{Cmd, CmdResult};
 use crate::core::{fninfo, utils};
+use crate::core::progress::Progress;
 
 // ==== COMMAND ====
 #[derive(Parser)]
@@ -36,6 +37,7 @@ fn cmd_import_source_dir(cmd: &ImportCommand) -> String {
     }
 }
 
+
 fn cmd_import_dest_dir(cmd: &ImportCommand) -> String {
     if let Some(s) = cmd.dest.as_ref() {
         s.clone()
@@ -49,6 +51,7 @@ fn cmd_import_dest_dir(cmd: &ImportCommand) -> String {
         }
     }
 }
+
 
 impl Cmd for ImportCommand {
     fn run(self) -> CmdResult {
@@ -112,7 +115,7 @@ fn glob_ex(base_dir:&str) -> Vec<PathBuf> {
 }
 
 impl<'a> Task<'a> {
-    pub fn copy<S: AsRef<Path>>(&mut self, src: S) -> R<u64> {
+    pub fn copy<S: AsRef<Path>>(&mut self, src: S, prog:&mut Progress) -> R<u64> {
         let src = src.as_ref();
         let start = Instant::now();
         let src_str = src.to_str().unwrap();
@@ -148,9 +151,12 @@ impl<'a> Task<'a> {
                 let metadata = fs::metadata(&src_str).unwrap();
                 crate::core::touch::touch(&dest_str, metadata.created().unwrap()).unwrap();
             }
+            
+            prog.inc();
             println!(
-                "{src_str} -> {dest_str}  _  {:.2}s",
-                start.elapsed().as_secs_f32()
+                "{}/{} {src_str} -> {dest_str}  _  {:.2}s",
+                prog.cur, prog.total,
+                start.elapsed().as_secs_f32(),
             );
             r.map_err(|_| io_error("copy".to_string(), src_str.to_string()))
         } else {
@@ -196,8 +202,10 @@ impl<'a> Task<'a> {
             files.len()
         );
 
+        let mut prog = Progress::new(files.len() as i32);
+
         for file in &files {
-            self.copy(file)?;
+            self.copy(file, &mut prog)?;
         }
         Ok(Response {})
     }
