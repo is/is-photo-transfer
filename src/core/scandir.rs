@@ -15,9 +15,14 @@ pub fn scan(dir: &Path) -> (Vec<DirEntry>, Vec<DirEntry>) {
     for entry in walker {
         if let Ok(e) = entry {
             if e.file_type().is_dir() {
-                if e.path().file_name().unwrap() != "preview" {
-                    dirs.push(e)
+                let dir_name = e.path().file_name().unwrap();
+                if dir_name == "preview" {
+                    continue;
                 }
+                if dir_name == "NKSC_PARAM" {
+                    continue
+                }
+                dirs.push(e);
             } else {
                 files.push(e)
             }

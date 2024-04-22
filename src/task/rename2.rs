@@ -99,6 +99,13 @@ fn walk<T: AsRef<Path>>(req: &Request, level: i32, dir: T) -> Result<(), RenameE
         let (pfiles, _) = scan_dir(preview_dir);
         do_rename_files(req, level, preview_dir, &pfiles, &name_map, true);
     }
+
+    let nksc_param = dir.join("NKSC_PARAM");
+    if nksc_param.is_dir() {
+        let sub_dir = nksc_param.as_path();
+        let (pfiles, _) = scan_dir(sub_dir);
+        do_rename_files(req, level, sub_dir, &pfiles, &name_map, true);
+    }
     Ok(())
 }
 
@@ -196,8 +203,10 @@ fn do_rename_files(
             break;
         }
 
+        let mut final_ext: &str;
+        let mut final_stem: String;
+
         let file_ext = file_ext.unwrap().to_str().unwrap();
-        // println!("file_stem: {file_stem}");
         let enhanced = file_stem.contains("Enhanced-NR");
         
         let file_stem2 = if enhanced && preview {
@@ -205,11 +214,19 @@ fn do_rename_files(
         } else {
             file_stem.to_string()
         };
+
+        final_ext = file_ext;
+        final_stem = file_stem2;
+
+        if file_ext == "nksc" {
+            final_ext = "NEF.nksc";
+            final_stem  = file_stem.to_string().replace(".NEF", "");
+        } 
     
-        match map.get(&file_stem2) {
+        match map.get(&final_stem) {
             Some(r) => {
                 let name = &r.name;
-                let new_fn = format!("{base_dir}/{name}.{file_ext}");
+                let new_fn = format!("{base_dir}/{name}.{final_ext}");
                 println!("RENAME {file_path} -> {new_fn}");
                 if !req.dry {
                     rename(req, file_path, &new_fn, &r.meta).expect("do_rename_faile");
@@ -217,7 +234,7 @@ fn do_rename_files(
             }
             None => {
                 if enhanced && preview {
-                    let new_fn = format!("{base_dir}/{file_stem2}.{file_ext}");
+                    let new_fn = format!("{base_dir}/{final_stem}.{final_ext}");
                     println!("RENAME {file_path} -> {new_fn}");
                     let meta = crate::core::fninfo::from(file_path).unwrap();
                     if !req.dry {

@@ -8,7 +8,7 @@ use crate::cmd::{Cmd, CmdResult};
 use crate::core::{fninfo, utils};
 use crate::core::progress::Progress;
 
-use kdam::{term, term::Colorizer, tqdm, BarExt, Column, RichProgress, Spinner};
+use kdam::{term, tqdm, BarExt, Column, RichProgress, Spinner};
 use std::io::{stderr, IsTerminal};
 
 // ==== COMMAND ====
