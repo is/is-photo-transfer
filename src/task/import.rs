@@ -120,7 +120,7 @@ fn glob_ex(base_dir:&str) -> Vec<PathBuf> {
 impl<'a> Task<'a> {
     pub fn copy<S: AsRef<Path>>(&mut self, src: S, prog:&mut Progress) -> R<u64> {
         let src = src.as_ref();
-        let start = Instant::now();
+        let _start = Instant::now();
         let src_str = src.to_str().unwrap();
         let dest_root_str = self.request.dest.to_str().unwrap().to_string();
 
