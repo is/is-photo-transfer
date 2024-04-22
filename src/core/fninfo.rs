@@ -19,6 +19,7 @@ static MODEL_MAP: phf::Map<&'static str, &'static str> = phf::phf_map! {
     "ILCE-6400" => "A6400",
     "ILCE-7RM4A" => "A7R4A",
     "ILCE-1" => "A1",
+    "NIKON Z 8" => "Z8",
 };
 
 lazy_static! {

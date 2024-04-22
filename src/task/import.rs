@@ -24,6 +24,7 @@ pub struct ImportCommand {
     rename: bool,
 }
 
+
 fn cmd_import_source_dir(cmd: &ImportCommand) -> String {
     match cmd.source.as_ref() {
         Some(s) => s.clone(),
@@ -98,6 +99,18 @@ pub struct Task<'a> {
     request: &'a mut Request,
 }
 
+fn glob_ex(base_dir:&str) -> Vec<PathBuf> {
+    let patterns = vec!(
+        base_dir.to_owned() + "/*.ARW",
+        base_dir.to_owned() + "/*.NEF");
+    
+    return patterns.iter()
+        .map(|x| glob::glob(x))
+        .map(|x| x.unwrap()).flatten()
+        .map(|x| x.unwrap())
+        .collect();
+}
+
 impl<'a> Task<'a> {
     pub fn copy<S: AsRef<Path>>(&mut self, src: S) -> R<u64> {
         let src = src.as_ref();
@@ -151,17 +164,18 @@ impl<'a> Task<'a> {
         let src_dir = src.to_str().unwrap();
 
         let src_pattern = if src_dir.ends_with("/DCIM") {
-            format!("{}/**/*.ARW", src_dir)
+            format!("{}/**", src_dir)
         } else if src.join("DCIM").is_dir() {
-            format!("{}/DCIM/**/*.ARW", src_dir)
+            format!("{}/DCIM/**", src_dir)
         } else {
-            format!("{}/*.ARW", src_dir)
+            format!("{}", src_dir)
         };
-
+    
+        println!("pattern: {}", src_pattern);
         let src_dir = src_dir.to_string();
 
+        /*
         let mut files: Vec<PathBuf> = Vec::new();
-
         for entry in glob::glob(&src_pattern).expect("Failed to read glob pattern") {
             match entry {
                 Ok(path) => {
@@ -172,6 +186,8 @@ impl<'a> Task<'a> {
                 }
             }
         }
+        */
+        let files = glob_ex(src_pattern.as_str());
 
         println!(
             "[IMPORT] {} to {}, {} photos",
@@ -179,6 +195,7 @@ impl<'a> Task<'a> {
             self.request.dest.to_str().unwrap(),
             files.len()
         );
+
         for file in &files {
             self.copy(file)?;
         }
