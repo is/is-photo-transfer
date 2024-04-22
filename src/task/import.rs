@@ -8,6 +8,9 @@ use crate::cmd::{Cmd, CmdResult};
 use crate::core::{fninfo, utils};
 use crate::core::progress::Progress;
 
+use kdam::{term, term::Colorizer, tqdm, BarExt, Column, RichProgress, Spinner};
+use std::io::{stderr, IsTerminal};
+
 // ==== COMMAND ====
 #[derive(Parser)]
 pub struct ImportCommand {
@@ -153,14 +156,15 @@ impl<'a> Task<'a> {
             }
             
             prog.inc();
-            println!(
-                "{}/{} {src_str} -> {dest_str}  _  {:.2}s",
-                prog.cur, prog.total,
-                start.elapsed().as_secs_f32(),
-            );
+            // println!(
+            //     "{}/{} {src_str} -> {dest_str}  _  {:.2}s",
+            //     prog.cur, prog.total,
+            //     start.elapsed().as_secs_f32(),
+            // );
             r.map_err(|_| io_error("copy".to_string(), src_str.to_string()))
         } else {
-            println!("{src_str} -> {dest_str}  _  skip");
+            prog.inc();
+            // println!("{src_str} -> {dest_str}  _  skip");
             Ok(999999999)
         }
     }
@@ -180,20 +184,8 @@ impl<'a> Task<'a> {
         println!("pattern: {}", src_pattern);
         let src_dir = src_dir.to_string();
 
-        /*
-        let mut files: Vec<PathBuf> = Vec::new();
-        for entry in glob::glob(&src_pattern).expect("Failed to read glob pattern") {
-            match entry {
-                Ok(path) => {
-                    files.push(path);
-                }
-                Err(e) => {
-                    println!("{:?}", e);
-                }
-            }
-        }
-        */
         let files = glob_ex(src_pattern.as_str());
+
 
         println!(
             "[IMPORT] {} to {}, {} photos",
@@ -202,11 +194,42 @@ impl<'a> Task<'a> {
             files.len()
         );
 
-        let mut prog = Progress::new(files.len() as i32);
+        term::init(stderr().is_terminal());
+        term::hide_cursor().unwrap();
 
+        let mut prog = Progress::new(files.len());
+        let mut pb = RichProgress::new(
+            tqdm!(
+                total = prog.total,
+                unit_scale = true,
+                unit_divisor = 1
+                // unit = "F"
+            ),
+            vec![
+                Column::Spinner(Spinner::new(
+                    &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+                    200.0,
+                    1.0,
+                )),
+                Column::Text("[bold blue] & ".to_owned()),
+                Column::Animation,
+                Column::Percentage(1),
+                Column::Text("•".to_owned()),
+                Column::CountTotal,
+                Column::Text("•".to_owned()),
+                // Column::Rate,
+                // Column::Text("•".to_owned()),
+                Column::RemainingTime,
+            ],
+        );
+
+        pb.replace(1, Column::Text("[bold blue]Import".to_owned()));
+        
         for file in &files {
             self.copy(file, &mut prog)?;
+            pb.update_to(prog.cur).unwrap();
         }
+        term::show_cursor().unwrap();
         Ok(Response {})
     }
 }

@@ -1,10 +1,10 @@
 pub struct Progress {
-    pub total: i32,
-    pub cur: i32,
+    pub total: usize,
+    pub cur: usize,
 }
 
 impl Progress {
-    pub fn new(total:i32) -> Progress {
+    pub fn new(total:usize) -> Progress {
         Progress {
             total: total,
             cur: 0
