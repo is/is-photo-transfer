@@ -203,25 +203,39 @@ fn do_rename_files(
             break;
         }
 
-        let mut final_ext: &str;
-        let mut final_stem: String;
-
-        let file_ext = file_ext.unwrap().to_str().unwrap();
         let enhanced = file_stem.contains("Enhanced-NR");
-        
-        let file_stem2 = if enhanced && preview {
-            file_stem.to_string().replace("-Enhanced-NR", "")
-        } else {
-            file_stem.to_string()
+
+        let (final_ext, final_stem) = 'bar: {
+            let file_ext = file_ext.unwrap().to_str().unwrap();
+
+            if file_ext == "nksc" {
+                break 'bar ("NEF.nksc", file_stem.to_string().replace(".NEF", ""));
+            }
+    
+            if enhanced && preview {
+                break 'bar (file_ext, file_stem.to_string().replace("-Enhanced-NR", ""));
+            }
+
+            (file_ext, file_stem.to_string())
         };
 
-        final_ext = file_ext;
-        final_stem = file_stem2;
+        // let mut final_ext: &str;
+        // let mut final_stem: String;
 
-        if file_ext == "nksc" {
-            final_ext = "NEF.nksc";
-            final_stem  = file_stem.to_string().replace(".NEF", "");
-        } 
+        // let file_ext = file_ext.unwrap().to_str().unwrap();
+        // let enhanced = file_stem.contains("Enhanced-NR");
+        
+        // let file_stem2 = if enhanced && preview {
+        //     file_stem.to_string().replace("-Enhanced-NR", "")
+        // } else {
+        //     file_stem.to_string()
+        // };
+        // final_ext = file_ext;
+        // final_stem = file_stem2;
+        // if file_ext == "nksc" {
+        //     final_ext = "NEF.nksc";
+        //     final_stem  = file_stem.to_string().replace(".NEF", "");
+        // } 
     
         match map.get(&final_stem) {
             Some(r) => {
