@@ -8,7 +8,8 @@ use crate::cmd::{Cmd, CmdResult};
 use crate::core::{fninfo, utils};
 use crate::core::progress::Progress;
 
-use kdam::{term, tqdm, BarExt, Column, RichProgress, Spinner};
+// use kdam::{term, tqdm, BarExt, Column, RichProgress, Spinner};
+use kdam::{term, tqdm, BarExt};
 use std::io::{stderr, IsTerminal};
 
 // ==== COMMAND ====
@@ -194,36 +195,19 @@ impl<'a> Task<'a> {
             files.len()
         );
 
+        
+        let mut prog = Progress::new(files.len());
+        
         term::init(stderr().is_terminal());
         term::hide_cursor().unwrap();
 
-        let mut prog = Progress::new(files.len());
-        let mut pb = RichProgress::new(
-            tqdm!(
-                total = prog.total,
-                unit_scale = true,
-                unit_divisor = 1
-                // unit = "F"
-            ),
-            vec![
-                Column::Spinner(Spinner::new(
-                    &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
-                    200.0,
-                    1.0,
-                )),
-                Column::Text("[bold blue] & ".to_owned()),
-                Column::Animation,
-                Column::Percentage(1),
-                Column::Text("•".to_owned()),
-                Column::CountTotal,
-                Column::Text("•".to_owned()),
-                // Column::Rate,
-                // Column::Text("•".to_owned()),
-                Column::RemainingTime,
-            ],
+        let mut pb = tqdm!(
+            total = prog.total,
+            desc = "import ",
+            animation = "classic",
+            // position = 6,
+            force_refresh = true
         );
-
-        pb.replace(1, Column::Text("[bold blue]Import".to_owned()));
         
         for file in &files {
             self.copy(file, &mut prog)?;
