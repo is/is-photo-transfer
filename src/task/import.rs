@@ -182,7 +182,6 @@ impl<'a> Task<'a> {
             format!("{}", src_dir)
         };
     
-        println!("pattern: {}", src_pattern);
         let src_dir = src_dir.to_string();
 
         let files = glob_ex(src_pattern.as_str());
