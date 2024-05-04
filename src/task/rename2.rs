@@ -209,7 +209,12 @@ fn do_rename_files(
             let file_ext = file_ext.unwrap().to_str().unwrap();
 
             if file_ext == "nksc" {
-                break 'bar ("NEF.nksc", file_stem.to_string().replace(".NEF", ""));
+                if file_stem.ends_with(".JPG") {
+                    break 'bar ("JPG.nksc", file_stem.to_string().replace(".JPG", ""));
+                }
+                if file_stem.ends_with(".NEF") {
+                    break 'bar ("NEF.nksc", file_stem.to_string().replace(".NEF", ""));
+                }
             }
     
             if enhanced && preview {
