@@ -27,7 +27,10 @@ lazy_static! {
         Regex::new(r"(\D)_(\d{5})__(\d{8}_\d{6})").expect("FILE_NAME_PATTERN_V1");
     static ref FILE_NAME_PATTERN_V2: Regex =
         Regex::new(r"(\d{8}_\d{6})__(\d{2,5})__(.{1,})").unwrap();
-    static ref NUMBER_IN_FILE_NAME: Regex = Regex::new(r".+?(\d{2,})").unwrap();
+    static ref NUMBER_IN_FILE_NAME: Regex =
+        Regex::new(r".+?(\d{2,})").expect("NUMBER_IN_FILE_NAME");
+    static ref NUMBER_IN_FILE_NAME_2: Regex =
+        Regex::new(r".+?(\d{2,})_(\d{1,})").expect("NUMBER_IN_FILE_NAME_2");
     static ref FILE_WITHOUT_DATE: Regex =
         Regex::new(r"(\d{6})__(\d{2,5})__(.{1,})").expect("SHORT_FILE_NAME");
     static ref SHORT_FILE_WITH_DIR: Regex =
@@ -65,6 +68,14 @@ fn number_from_file_name(file_name: &str) -> String {
             return number;
         }
     }
+    if file_name.starts_with("DSC") && file_name.len() <= 16 {
+        if let Some(captures) = NUMBER_IN_FILE_NAME_2.captures(file_name) {
+            let number = captures.get(2).unwrap().as_str();
+            let number = format!("{:05}",
+                number.parse::<u32>().unwrap());
+            return number;
+        }
+    } 
     if let Some(captures) = FILE_WITHOUT_DATE.captures(file_name) {
         let number = captures.get(2).unwrap().as_str();
         let number = number.to_string();
