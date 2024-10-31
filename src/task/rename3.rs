@@ -8,7 +8,7 @@ use crate::core::scandir::{scan as scan_dir, DirEntry};
 
 // ==== COMMAND ====
 #[derive(Parser, Debug)]
-pub struct Rename2Command {
+pub struct Rename3Command {
     #[arg(default_value = ".")]
     dir: String,
     #[arg(short, long, default_value_t = false)]
@@ -26,7 +26,7 @@ pub struct Rename2Command {
     touch: bool,
 }
 
-impl Cmd for Rename2Command {
+impl Cmd for Rename3Command {
     fn run(self) -> CmdResult {
         do_rename(&Request::from(&self))?;
         Ok(())
@@ -62,7 +62,7 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn from(cmd: &Rename2Command) -> Self {
+    pub fn from(cmd: &Rename3Command) -> Self {
         Request {
             dir: cmd.dir.clone(),
             exif: cmd.exif,
@@ -137,10 +137,10 @@ fn build_rename_map(
         }
 
         let is_enhanced: bool = _file_name.contains("Enhanced-NR");
-        if is_enhanced {
-            println!("{level} - {full_path:?} - ENHANCED-NR");
-            continue;
-        }
+        // if is_enhanced {
+        //     println!("{level} - {full_path:?} - ENHANCED-NR");
+        //     continue;
+        // }
 
 
         let meta: Result<Info, crate::core::fninfo::InfoErr> = crate::core::fninfo::from(&full_path);
@@ -160,6 +160,12 @@ fn build_rename_map(
 
         let meta_name = if req.compact {
             meta_name[9..].to_string()
+        } else {
+            meta_name
+        };
+
+        let meta_name = if is_enhanced {
+            meta_name.replace("Enhanced-NR", "en")
         } else {
             meta_name
         };
@@ -217,30 +223,13 @@ fn do_rename_files(
                 }
             }
 
-            if enhanced && preview {
-                break 'bar (file_ext, file_stem.to_string().replace("-Enhanced-NR", ""));
-            }
+            // if enhanced && preview {
+            //     break 'bar (file_ext, file_stem.to_string().replace("-Enhanced-NR", ""));
+            // }
 
             (file_ext, file_stem.to_string())
         };
 
-        // let mut final_ext: &str;
-        // let mut final_stem: String;
-
-        // let file_ext = file_ext.unwrap().to_str().unwrap();
-        // let enhanced = file_stem.contains("Enhanced-NR");
-
-        // let file_stem2 = if enhanced && preview {
-        //     file_stem.to_string().replace("-Enhanced-NR", "")
-        // } else {
-        //     file_stem.to_string()
-        // };
-        // final_ext = file_ext;
-        // final_stem = file_stem2;
-        // if file_ext == "nksc" {
-        //     final_ext = "NEF.nksc";
-        //     final_stem  = file_stem.to_string().replace(".NEF", "");
-        // }
 
         match map.get(&final_stem) {
             Some(r) => {
